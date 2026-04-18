@@ -86,7 +86,7 @@ def persist_results(raw_assessment: str, trace: list, events: list, db: Session)
     lon_avg = sum(e.lon for e in events) / len(events)
     
     incident = Incident(
-        hypothesis=raw_assessment[:200], # Summary
+        hypothesis=raw_assessment, # Store full assessment
         confidence_score=0.7, # Defaulting for now
         confidence_rationale="Investigation complete.",
         recommended_action="Review logs",
