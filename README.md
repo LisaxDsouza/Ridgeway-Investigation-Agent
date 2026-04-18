@@ -10,7 +10,7 @@ The platform acts as an **Investigation Engine**, proactively clustering signals
 
 - **Backend**: FastAPI (Python 3.11), SQLAlchemy, PostgreSQL, Scikit-learn (DBSCAN).
 - **AI Agent**: Groq LPU (Llama 3 70B) for sub-second tool-calling investigation.
-- **Frontend**: Next.js 14, Mapbox GL JS, Tailwind CSS, Zustand, Vercel AI SDK.
+- **Frontend**: Next.js 14, **MapLibre GL JS** (Open-source vector maps), Tailwind CSS, Zustand, Vercel AI SDK.
 - **Infrastructure**: Docker Compose (Local Database), Railway/Render (Backend), Vercel (Frontend).
 
 ---
@@ -22,7 +22,7 @@ The platform acts as an **Investigation Engine**, proactively clustering signals
 - **Node.js 18+**
 - **Docker & Docker Compose**
 - **Groq API Key** (Obtain at [console.groq.com](https://console.groq.com))
-- **Mapbox Public Token** (Obtain at [account.mapbox.com](https://account.mapbox.com))
+- **No Mapbox Token Required** (Uses open-source MapLibre GL JS)
 
 ### 2. Installation
 
@@ -50,6 +50,8 @@ cd skylark-morning-brief
    ```bash
    cp .env.example .env
    # Edit .env and add your GROQ_API_KEY
+   # Ensure DATABASE_URL uses port 5433 to avoid local conflicts:
+   # DATABASE_URL=postgresql://postgres:password@localhost:5433/ridgeway
    ```
 
 #### Frontend Setup
@@ -64,7 +66,7 @@ cd skylark-morning-brief
 3. Configure environment variables:
    ```bash
    cp .env.local.example .env.local
-   # Edit .env.local and add your NEXT_PUBLIC_MAPBOX_TOKEN
+   # No bank details or tokens required for MapLibre demo mode.
    ```
 
 ### 3. Database & Seeding
@@ -75,7 +77,7 @@ cd skylark-morning-brief
 2. Seed the database with the "Block C" incident scenario:
    ```bash
    cd backend
-   python seed/seed.py
+   python seed/ingest.py
    ```
 
 ### 4. Running the Project
@@ -98,7 +100,7 @@ ridgeway/
 │   └── Dockerfile       # Production build config
 ├── frontend/
 │   ├── app/             # Next.js App Router (Map, Review Panel, Briefing)
-│   ├── components/      # UI components (Mapbox, Incident Cards)
+│   ├── components/      # UI components (MapLibre, Incident Cards)
 │   └── lib/             # API client & state management (Zustand)
 └── docker-compose.yml   # Local development services
 ```

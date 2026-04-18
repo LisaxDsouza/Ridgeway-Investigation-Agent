@@ -12,7 +12,7 @@ router = APIRouter(prefix="/investigate", tags=["investigation"])
 jobs = {}
 
 @router.post("/")
-async def start_investigation(background_tasks: background_tasks, db: Session = Depends(get_db)):
+async def start_investigation(background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     """
     Trigger full agent investigation run.
     """

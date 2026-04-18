@@ -3,6 +3,13 @@ from datetime import datetime
 from ..models import Event
 from typing import List, Optional
 
+def _serialize_event(e: Event):
+    return {
+        k: (v.isoformat() if isinstance(v, datetime) else v)
+        for k, v in e.__dict__.items()
+        if k != '_sa_instance_state'
+    }
+
 def retrieve_sensor_events(db: Session, start_time: datetime, end_time: datetime, zone: Optional[str] = None):
     """
     List of sensor events: type, timestamp, location, raw_value
@@ -12,8 +19,7 @@ def retrieve_sensor_events(db: Session, start_time: datetime, end_time: datetime
         Event.timestamp >= start_time,
         Event.timestamp <= end_time
     )
-    # Note: Zone filtering would use spatial query in production
-    return [e.__dict__ for e in query.all()]
+    return [_serialize_event(e) for e in query.all()]
 
 def retrieve_access_logs(db: Session, start_time: datetime, end_time: datetime, gate: Optional[str] = None):
     """
@@ -24,7 +30,7 @@ def retrieve_access_logs(db: Session, start_time: datetime, end_time: datetime, 
         Event.timestamp >= start_time,
         Event.timestamp <= end_time
     )
-    return [e.__dict__ for e in query.all()]
+    return [_serialize_event(e) for e in query.all()]
 
 def retrieve_vehicle_events(db: Session, start_time: datetime, end_time: datetime, zone: Optional[str] = None):
     """
@@ -35,7 +41,7 @@ def retrieve_vehicle_events(db: Session, start_time: datetime, end_time: datetim
         Event.timestamp >= start_time,
         Event.timestamp <= end_time
     )
-    return [e.__dict__ for e in query.all()]
+    return [_serialize_event(e) for e in query.all()]
 
 def retrieve_drone_logs(db: Session, mission_id: Optional[str] = None):
     """

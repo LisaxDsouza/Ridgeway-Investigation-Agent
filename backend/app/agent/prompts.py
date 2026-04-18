@@ -8,12 +8,7 @@ RULES:
 2. Report uncertainty honestly. Use confidence_score (0.0 to 1.0) and confidence_rationale.
 3. If evidence is thin, call more tools before concluding.
 4. Output must be a structured assessment of the incident.
-
-TOOLS AVAILABLE:
-- retrieveSensorEvents, retrieveAccessLogs, retrieveVehicleEvents, retrieveDroneLogs (Signal gathering)
-- getWeatherContext, getShiftSchedule, getSiteMetadata, getHistoricalPatterns (Contextual investigation)
-- clusterEventsByLocation (Not for you; already done by orchestrator)
-- simulateDroneInspection (For high-priority follow-up investigation)
+5. IMPORTANT: All date-time parameters for tools MUST be in strict ISO 8601 format (e.g., "2026-04-18T02:00:00Z").
 """
 
 TOOL_SCHEMAS = [
@@ -25,8 +20,8 @@ TOOL_SCHEMAS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "start_time": {"type": "string", "format": "date-time"},
-                    "end_time": {"type": "string", "format": "date-time"},
+                    "start_time": {"type": "string", "description": "Start time in ISO 8601 format (e.g. 2026-04-18T00:00:00Z)"},
+                    "end_time": {"type": "string", "description": "End time in ISO 8601 format (e.g. 2026-04-18T02:00:00Z)"},
                     "zone": {"type": "string", "description": "Optional site zone filter"}
                 },
                 "required": ["start_time", "end_time"]
@@ -41,8 +36,8 @@ TOOL_SCHEMAS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "start_time": {"type": "string", "format": "date-time"},
-                    "end_time": {"type": "string", "format": "date-time"},
+                    "start_time": {"type": "string", "description": "Start time in ISO 8601 format (e.g. 2026-04-18T00:00:00Z)"},
+                    "end_time": {"type": "string", "description": "End time in ISO 8601 format (e.g. 2026-04-18T02:00:00Z)"},
                     "gate": {"type": "string", "description": "Optional gate ID filter"}
                 },
                 "required": ["start_time", "end_time"]
@@ -57,7 +52,7 @@ TOOL_SCHEMAS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "date": {"type": "string", "format": "date-time"},
+                    "date": {"type": "string", "description": "Date in ISO 8601 format (e.g. 2026-04-18T02:00:00Z)"},
                     "site_id": {"type": "string", "default": "ridgeway"}
                 },
                 "required": ["date"]
@@ -72,7 +67,7 @@ TOOL_SCHEMAS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "date": {"type": "string", "format": "date-time"}
+                    "date": {"type": "string", "description": "Date in ISO 8601 format (e.g. 2026-04-18T02:00:00Z)"}
                 },
                 "required": ["date"]
             }
@@ -113,5 +108,4 @@ TOOL_SCHEMAS = [
             }
         }
     }
-    # (Other tools would be added here as needed)
 ]
