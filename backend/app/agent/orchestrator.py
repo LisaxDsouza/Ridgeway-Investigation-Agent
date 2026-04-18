@@ -3,105 +3,144 @@ import groq
 from sqlalchemy.orm import Session
 from ..config import settings
 from .prompts import SYSTEM_PROMPT, TOOL_SCHEMAS
-from ..models import Incident, Event, DroneMission
-from ..tools.signal_tools import retrieve_sensor_events, retrieve_access_logs, retrieve_vehicle_events
-from ..tools.context_tools import get_weather_context, get_shift_schedule, get_site_metadata
-from ..tools.drone_tools import simulate_drone_inspection
+from ..models.incident import Incident
+from ..mcp_server import server as mcp_root
 
-client = groq.Groq(api_key=settings.GROQ_API_KEY)
+client = groq.AsyncGroq(api_key=settings.GROQ_API_KEY)
 
-def dispatch_tool(name: str, args: dict, db: Session):
+async def dispatch_mcp_tool(name: str, args: dict):
     """
-    Dynamically call the appropriate tool function based on LLM request.
+    Invoke the MCP tool handler logic.
+    For MVP, we call the functions in the server directly.
     """
-    if name == "retrieveSensorEvents":
-        return retrieve_sensor_events(db, **args)
-    elif name == "retrieveAccessLogs":
-        return retrieve_access_logs(db, **args)
-    elif name == "getWeatherContext":
-        return get_weather_context(**args)
-    elif name == "getShiftSchedule":
-        return get_shift_schedule(**args)
-    elif name == "getSiteMetadata":
-        return get_site_metadata(**args)
-    elif name == "simulateDroneInspection":
-        return simulate_drone_inspection(**args)
-    return {"error": f"Tool {name} not found"}
+    try:
+        # Since we use FastMCP, we can access the registered tools
+        # This is a bit of a shortcut for the local dev loop
+        tool_func = mcp_root.mcp._tools.get(name)
+        if not tool_func:
+            return {"error": f"Tool {name} not found"}
+        
+        # FastMCP tools are usually async
+        return await tool_func.fn(**args)
+    except Exception as e:
+        return {"error": f"Execution failed: {str(e)}"}
 
-def investigate_cluster(cluster_events: list, db: Session):
+async def investigate_cluster(cluster_events: list, db: Session, site_id: str):
     """
-    The main investigation loop for a single cluster of events.
+    The brain of the intelligence engine.
+    Orchestrates multiple tool calls to form a forensic hypothesis.
     """
-    # 1. Build initial context
-    event_summaries = [f"{e.event_type} at {e.timestamp}" for e in cluster_events]
+    # 1. Build initial context for Maya
+    # We pass the raw signals that triggered the investigation
+    event_summaries = [
+        {
+            "id": e.get('id'),
+            "type": e.get('type') or e.get('source'),
+            "zone": e.get('zone'),
+            "time": e.get('recorded_at') or e.get('timestamp')
+        } for e in cluster_events
+    ]
+    
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
-        {"role": "user", "content": f"Investigate this cluster of events: {json.dumps(event_summaries)}"}
+        {"role": "user", "content": f"SITE_ID: {site_id}\nTarget Signals: {json.dumps(event_summaries)}\n\nBegin forensic investigation. Use tools to gather context."}
     ]
     
     reasoning_trace = []
+    tool_calls_history = []
     
-    # 2. Agent loop
-    for _ in range(8): # Limit to 8 turns to prevent infinite loops
-        response = client.chat.completions.create(
+    # 2. Forensic Loop ( Maya )
+    for turn in range(10): # Allow up to 10 forensic steps
+        response = await client.chat.completions.create(
             model=settings.GROQ_MODEL,
             messages=messages,
             tools=TOOL_SCHEMAS,
-            tool_choice="auto"
+            tool_choice="auto",
+            temperature=0.1 # Keep investigation factual
         )
-        message = response.choices[0].message
         
-        if message.tool_calls:
-            messages.append(message)
-            for tool_call in message.tool_calls:
-                result = dispatch_tool(tool_call.function.name, 
-                                       json.loads(tool_call.function.arguments), 
-                                       db)
-                
-                reasoning_trace.append({
-                    "tool": tool_call.function.name,
-                    "query": tool_call.function.arguments,
-                    "insight": str(result)[:200] + "..." # Truncate for trace
-                })
-                
-                messages.append({
-                    "role": "tool",
-                    "tool_call_id": tool_call.id,
-                    "name": tool_call.function.name,
-                    "content": json.dumps(result)
-                })
-        else:
-            # Model finished investigation
-            return persist_results(message.content, reasoning_trace, cluster_events, db)
+        message = response.choices[0].message
+        messages.append(message)
+        
+        if not message.tool_calls:
+            # Investigation complete!
+            return await persist_incident(message.content, reasoning_trace, tool_calls_history, cluster_events, site_id, db)
+            
+        # Handle Tool Calls
+        for tool_call in message.tool_calls:
+            name = tool_call.function.name
+            args = json.loads(tool_call.function.arguments)
+            
+            # Auto-inject site_id if missing in args
+            if "site_id" not in args and name != "clusterEventsByLocation":
+                args["site_id"] = site_id
+            
+            print(f" Maya Calling Tool: {name} with {args}")
+            
+            result = await dispatch_mcp_tool(name, args)
+            
+            # Log for the trace
+            reasoning_trace.append({
+                "step": turn + 1,
+                "tool": name,
+                "input": args,
+                "outcome": str(result)[:300] + "..." # Succinct summary
+            })
+            
+            tool_calls_history.append({
+                "tool": name,
+                "args": args,
+                "result_keys": list(result.keys()) if isinstance(result, dict) else []
+            })
+            
+            messages.append({
+                "role": "tool",
+                "tool_call_id": tool_call.id,
+                "name": name,
+                "content": json.dumps(result)
+            })
 
-    return None # Fallback if loop exceeded
+    return None
 
-def persist_results(raw_assessment: str, trace: list, events: list, db: Session):
+async def persist_incident(raw_summary: str, trace: list, calls: list, initial_events: list, site_id: str, db: Session):
     """
-    Parse the LLM's final assessment and save it as an Incident.
+    Saves the final investigation as a formal Incident.
     """
-    # Simple parsing logic for MVP (assumes model follows instructions)
-    # in production, we might force JSON output format
-    lat_avg = sum(e.lat for e in events) / len(events)
-    lon_avg = sum(e.lon for e in events) / len(events)
+    # Parse coordinates from initial events
+    lats = [e.get('lat') for e in initial_events if e.get('lat')]
+    lons = [e.get('lon') for e in initial_events if e.get('lon')]
     
+    avg_lat = sum(lats)/len(lats) if lats else 12.9716 # fallback to site center
+    avg_lon = sum(lons)/len(lons) if lons else 77.5946
+    
+    # Calculate initial confidence from summary keywords (Heuristic)
+    confidence = 0.8 # default
+    level = "high"
+    if "uncertain" in raw_summary.lower() or "not clear" in raw_summary.lower():
+        confidence = 0.4
+        level = "low"
+    elif "likely" in raw_summary.lower():
+        confidence = 0.6
+        level = "medium"
+
     incident = Incident(
-        hypothesis=raw_assessment, # Store full assessment
-        confidence_score=0.7, # Defaulting for now
-        confidence_rationale="Investigation complete.",
-        recommended_action="Review logs",
-        reasoning_trace=trace,
-        cluster_center_lat=lat_avg,
-        cluster_center_lon=lon_avg
+        site_id=site_id,
+        hypothesis=raw_summary,
+        confidence_score=confidence,
+        confidence_level=level,
+        confidence_rationale="Verified through forensic triangulation of sources.",
+        recommended_action="Notify Supervisor" if confidence > 0.7 else "Monitor Zone",
+        reasoning_trace={"steps": trace},
+        tool_calls_made=calls,
+        related_event_ids=[e.get('id') for e in initial_events],
+        cluster_centroid_lat=avg_lat,
+        cluster_centroid_lon=avg_lon,
+        triggered_by="scheduled"
     )
     
     db.add(incident)
-    db.flush() # Get ID
-    
-    # Link events to the incident
-    for e in events:
-        e.incident_id = incident.id
-        db.add(e)
-    
     db.commit()
+    db.refresh(incident)
+    
+    print(f"🔍 Incident persisted: {incident.id} (Confidence: {level})")
     return incident

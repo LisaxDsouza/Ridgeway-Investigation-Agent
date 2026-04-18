@@ -119,3 +119,7 @@ The system follows an **investigation loop** rather than a simple summary:
 
 ## 📄 License
 Confidential - For Skylark Drones Engineering Assignment only.
+
+
+
+npm install axios zustand maplibre-gl lucide-react clsx tailwind-merge framer-motion

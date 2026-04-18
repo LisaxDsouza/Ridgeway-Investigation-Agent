@@ -9,6 +9,14 @@ class Settings(BaseSettings):
     SEED_SCENARIO: str = "block_c_incident"
     LOG_LEVEL: str = "INFO"
 
+    # MCP & Site Context
+    MCP_TRANSPORT: str = "stdio"
+    MCP_SERVER_HOST: str = "localhost"
+    MCP_SERVER_PORT: int = 8001
+    SITE_ID: str = "ridgeway-01"
+    INVESTIGATION_WINDOW_HOURS: int = 12
+    HOOK_DEFAULT_LOOKBACK_MINUTES: int = 120
+
     class Config:
         env_file = ".env"
 

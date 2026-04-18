@@ -7,28 +7,25 @@ from datetime import datetime
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.database import SessionLocal, engine, Base
-from app.models import Event
-from seed.scenarios.block_c_incident import get_block_c_scenario
+from app.config import settings
+from seed.scenarios.three_block_forensics import seed_three_block_scenario
+from app.models.sensor_readings import SensorReading
 
 def seed_db():
-    print("Initializing database...")
+    print("Initializing forensic database...")
     Base.metadata.create_all(bind=engine)
     
     db = SessionLocal()
     try:
-        # Check if already seeded
-        if db.query(Event).count() > 0:
-            print("Database already contains events. Skipping seed.")
+        # Check if already seeded (by checking sensor_readings)
+        if db.query(SensorReading).count() > 0:
+            print("Database already contains data. Skipping seed.")
             return
 
-        print("Seeding Block C Scenario...")
-        scenario_events = get_block_c_scenario()
-        for event_data in scenario_events:
-            event = Event(**event_data)
-            db.add(event)
-        
-        db.commit()
-        print(f"Successfully seeded {len(scenario_events)} events.")
+        site_id = settings.SITE_ID
+        print(f"Injecting 3-Block Scenario into {site_id}...")
+        seed_three_block_scenario(db, site_id)
+        print("Seeding complete.")
         
     except Exception as e:
         print(f"Error seeding database: {e}")

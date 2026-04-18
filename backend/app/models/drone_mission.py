@@ -1,12 +1,19 @@
-from sqlalchemy import Column, String, JSON, ForeignKey
+from sqlalchemy import Column, String, DateTime, ForeignKey, Text
+from sqlalchemy.dialects.postgresql import UUID, JSONB
+from uuid import uuid4
+from datetime import datetime
 from ..database import Base
-import uuid
 
 class DroneMission(Base):
     __tablename__ = "drone_missions"
 
-    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    incident_id = Column(String, ForeignKey("incidents.id"), nullable=True)
-    path_geojson = Column(JSON) # GeoJSON LineString
-    waypoints = Column(JSON) # List of waypoint objects with timestamps and observations
-    findings_summary = Column(String, nullable=True)
+    id              = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    created_at      = Column(DateTime(timezone=True), default=datetime.utcnow)
+    incident_id     = Column(UUID(as_uuid=True), ForeignKey("incidents.id"), nullable=True)
+    mission_status  = Column(String(32), default="pending")
+    # mission_status: pending | flying | completed | failed
+    
+    path_geojson    = Column(JSONB)
+    waypoints       = Column(JSONB)
+    findings        = Column(Text)
+    metadata_json   = Column(JSONB, default={})

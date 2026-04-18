@@ -1,14 +1,19 @@
 SYSTEM_PROMPT = """
-You are the Ridgeway Site Overnight Intelligence Assistant. Your role is investigator, not summarizer.
-You receive a cluster of overnight signals (fence alarms, badge swipes, vehicle detections, etc.).
-Your goal is to form a hypothesis about what happened and recommend an action.
+You are the Skylark Intelligence Engine (codename: Maya).
+Your mission is to perform automated forensic investigations on security and operational signals from remote sites.
+
+You follow a "Forensics First" methodology:
+1. SIGNAL CORRELATION: Correlate raw signals (fence alarms, motion) with context (weather, authorized staff).
+2. ANOMALY DETECTION: Compare current events against historical patterns using getHistoricalPatterns.
+3. SPATIAL CLUSTERING: Group raw signals into discrete events using clusterEventsByLocation.
+4. VISUAL VERIFICATION: If a breach is suspected, use simulateDroneInspection.
 
 RULES:
-1. Don't guess. Use your context tools to verify hypotheses (e.g., check weather for wind, check shift schedule for authorized personnel).
-2. Report uncertainty honestly. Use confidence_score (0.0 to 1.0) and confidence_rationale.
-3. If evidence is thin, call more tools before concluding.
-4. Output must be a structured assessment of the incident.
-5. IMPORTANT: All date-time parameters for tools MUST be in strict ISO 8601 format (e.g., "2026-04-18T02:00:00Z").
+- Always use ISO 8601 timestamps (YYYY-MM-DDTHH:MM:SSZ).
+- Be skeptical of single-source alarms. Verify with secondary sources (e.g., fence alarm + badge swipe + weather).
+- Distinguish between "Operational Noise" (high wind, staff movement) and "Security Incidents".
+- If evidence is clear but low-confidence, explain why in confidence_rationale.
+- For restricted zones, the burden of proof is higher.
 """
 
 TOOL_SCHEMAS = [
@@ -16,15 +21,18 @@ TOOL_SCHEMAS = [
         "type": "function",
         "function": {
             "name": "retrieveSensorEvents",
-            "description": "Retrieve raw sensor telemetry (e.g., fence vibrations) for a time window.",
+            "description": "Retrieve detailed sensor logs (vibration, perimeter, motion) for a time window.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "start_time": {"type": "string", "description": "Start time in ISO 8601 format (e.g. 2026-04-18T00:00:00Z)"},
-                    "end_time": {"type": "string", "description": "End time in ISO 8601 format (e.g. 2026-04-18T02:00:00Z)"},
-                    "zone": {"type": "string", "description": "Optional site zone filter"}
+                    "site_id": {"type": "string"},
+                    "start_time": {"type": "string", "description": "ISO format timestamp"},
+                    "end_time": {"type": "string", "description": "ISO format timestamp"},
+                    "zone": {"type": "string", "description": "Optional zone filter (block-a, etc)"},
+                    "sensor_type": {"type": "string", "description": "fence_vibration | motion | perimeter"},
+                    "breached_only": {"type": "boolean", "default": False}
                 },
-                "required": ["start_time", "end_time"]
+                "required": ["site_id", "start_time", "end_time"]
             }
         }
     },
@@ -32,15 +40,35 @@ TOOL_SCHEMAS = [
         "type": "function",
         "function": {
             "name": "retrieveAccessLogs",
-            "description": "Retrieve gate access and badge swipe events.",
+            "description": "Retrieve badge swipe and gate operation logs.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "start_time": {"type": "string", "description": "Start time in ISO 8601 format (e.g. 2026-04-18T00:00:00Z)"},
-                    "end_time": {"type": "string", "description": "End time in ISO 8601 format (e.g. 2026-04-18T02:00:00Z)"},
-                    "gate": {"type": "string", "description": "Optional gate ID filter"}
+                    "site_id": {"type": "string"},
+                    "start_time": {"type": "string"},
+                    "end_time": {"type": "string"},
+                    "gate_id": {"type": "string"},
+                    "outcome_filter": {"type": "string", "description": "success | fail"}
                 },
-                "required": ["start_time", "end_time"]
+                "required": ["site_id", "start_time", "end_time"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "retrieveVehicleEvents",
+            "description": "Retrieve vehicle detections and reconstructed movement paths.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "site_id": {"type": "string"},
+                    "start_time": {"type": "string"},
+                    "end_time": {"type": "string"},
+                    "zone": {"type": "string"},
+                    "restricted_only": {"type": "boolean", "default": False}
+                },
+                "required": ["site_id", "start_time", "end_time"]
             }
         }
     },
@@ -48,14 +76,15 @@ TOOL_SCHEMAS = [
         "type": "function",
         "function": {
             "name": "getWeatherContext",
-            "description": "Get weather conditions (wind, visibility) for a specific date and site.",
+            "description": "Retrieve high-resolution weather data (wind, visibility).",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "date": {"type": "string", "description": "Date in ISO 8601 format (e.g. 2026-04-18T02:00:00Z)"},
-                    "site_id": {"type": "string", "default": "ridgeway"}
+                    "site_id": {"type": "string"},
+                    "start_time": {"type": "string"},
+                    "end_time": {"type": "string"}
                 },
-                "required": ["date"]
+                "required": ["site_id", "start_time", "end_time"]
             }
         }
     },
@@ -63,13 +92,14 @@ TOOL_SCHEMAS = [
         "type": "function",
         "function": {
             "name": "getShiftSchedule",
-            "description": "Retrieve the roster of personnel on duty for a specific date.",
+            "description": "Retrieve staff rosters and active site zones.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "date": {"type": "string", "description": "Date in ISO 8601 format (e.g. 2026-04-18T02:00:00Z)"}
+                    "site_id": {"type": "string"},
+                    "date": {"type": "string", "description": "YYYY-MM-DD"}
                 },
-                "required": ["date"]
+                "required": ["site_id", "date"]
             }
         }
     },
@@ -77,12 +107,48 @@ TOOL_SCHEMAS = [
         "type": "function",
         "function": {
             "name": "getSiteMetadata",
-            "description": "Get definitions and rules for specific site zones.",
+            "description": "Retrieve site layout, zone boundaries, and classification.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "zone": {"type": "string"}
-                }
+                    "site_id": {"type": "string"},
+                    "zone_id": {"type": "string"}
+                },
+                "required": ["site_id"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "getHistoricalPatterns",
+            "description": "Compare current events against historical norms to detect anomalies.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "site_id": {"type": "string"},
+                    "event_type": {"type": "string"},
+                    "zone": {"type": "string"},
+                    "lookback_days": {"type": "integer", "default": 30}
+                },
+                "required": ["site_id", "event_type", "zone"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "clusterEventsByLocation",
+            "description": "Group raw signals into discrete spatial clusters using DBSCAN.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "events": {
+                        "type": "array",
+                        "items": {"type": "object"}
+                    }
+                },
+                "required": ["events"]
             }
         }
     },
@@ -90,21 +156,15 @@ TOOL_SCHEMAS = [
         "type": "function",
         "function": {
             "name": "simulateDroneInspection",
-            "description": "Trigger a simulated drone patrol over an incident location to gather visual/thermal signatures.",
+            "description": "Dispatch a simulated drone to verify specific coordinates.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "incident_id": {"type": "string"},
-                    "target_location": {
-                        "type": "object",
-                        "properties": {
-                            "lat": {"type": "number"},
-                            "lon": {"type": "number"}
-                        },
-                        "required": ["lat", "lon"]
-                    }
+                    "target_lat": {"type": "number"},
+                    "target_lon": {"type": "number"},
+                    "incident_id": {"type": "string"}
                 },
-                "required": ["incident_id", "target_location"]
+                "required": ["target_lat", "target_lon"]
             }
         }
     }
