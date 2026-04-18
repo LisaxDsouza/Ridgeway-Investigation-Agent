@@ -1,0 +1,34 @@
+# Node.js
+frontend/node_modules/
+frontend/.next/
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+
+# Python
+backend/__pycache__/
+backend/*.py[cod]
+backend/*$py.class
+backend/venv/
+backend/env/
+backend/.env
+backend/.pytest_cache/
+
+# Databases
+*.sqlite3
+postgres_data/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Misc
+temp_docx_extract/
+extracted_text.txt
+Architecture_utf8.txt
+doc_content.txt
+!Architecture.txt
