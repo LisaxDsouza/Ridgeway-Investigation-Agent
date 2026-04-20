@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from ..database import get_db
 
 router = APIRouter(prefix="/chat", tags=["chat"])
-client = groq.Groq(api_key=settings.GROQ_API_KEY)
+client = groq.AsyncGroq(api_key=settings.GROQ_API_KEY)
 
 class ChatRequest(BaseModel):
     message: str
@@ -50,7 +50,7 @@ async def maya_general_chat(
     
     # 3. General Query Handling
     try:
-        response = client.chat.completions.create(
+        response = await client.chat.completions.create(
             model=settings.GROQ_MODEL,
             messages=[
                 {
@@ -76,7 +76,7 @@ async def maya_general_chat(
             if settings.GROQ_MODEL == fallback_model:
                 raise # Already using fallback, re-raise
                 
-            response = client.chat.completions.create(
+            response = await client.chat.completions.create(
                 model=fallback_model,
                 messages=[
                     {"role": "system", "content": "You are Maya, the Ridgeway Forensic AI. Be concise. The primary analysis engine is under heavy load, using secondary processing."},

@@ -55,14 +55,14 @@ export default function Shell({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className="flex h-screen bg-[#f1f3f6] p-4 lg:p-10 relative overflow-hidden font-sans">
+    <div className="flex h-screen bg-[#f1f3f6] p-0 relative overflow-hidden font-sans">
       {/* Background Decorative Bubbles */}
       <div className="absolute top-[-100px] right-[-100px] w-96 h-96 bg-skylark-orange/10 rounded-full blur-3xl p-10 animate-pulse" />
       <div className="absolute bottom-[-150px] left-[200px] w-[500px] h-[500px] bg-orange-200/20 rounded-full blur-[100px]" />
       <div className="absolute top-[40%] left-[-50px] w-32 h-32 bg-skylark-orange/5 rounded-full blur-2xl" />
 
       {/* 🚀 Minimalist Sidebar */}
-      <aside className="w-80 bg-white/80 backdrop-blur-md rounded-l-[2.5rem] flex flex-col p-8 border-r border-orange-100 shrink-0 z-10">
+      <aside className="w-80 bg-white/80 backdrop-blur-md rounded-none flex flex-col p-8 border-r border-orange-100 shrink-0 z-10">
         <div className="flex items-center gap-3 mb-10 px-2 cursor-pointer" onClick={() => setActiveTab('dashboard')}>
            <div className="w-10 h-10 bg-skylark-orange rounded-xl flex items-center justify-center text-white shadow-lg shadow-orange-500/20">
               <Zap className="w-6 h-6 fill-white" />
@@ -134,7 +134,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* 🖥️ Main Interactive Stage */}
-      <section className="flex-1 bg-white/95 backdrop-blur-sm rounded-r-[2.5rem] flex flex-col overflow-hidden relative border-4 border-skylark-orange/20 z-10 shadow-2xl">
+      <section className="flex-1 bg-white flex flex-col overflow-hidden relative z-10 shadow-sm">
         <div className="flex-1 overflow-auto">
           {renderActiveTab()}
         </div>

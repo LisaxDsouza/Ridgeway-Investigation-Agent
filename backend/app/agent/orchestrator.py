@@ -3,6 +3,8 @@ import groq
 from sqlalchemy.orm import Session
 from ..config import settings
 from .prompts import SYSTEM_PROMPT, TOOL_SCHEMAS
+from .evidence_graph import build_evidence_graph
+from .confidence import calculate_incident_confidence
 from ..models.incident import Incident
 from ..mcp_server import server as mcp_root
 
@@ -22,8 +24,11 @@ async def dispatch_mcp_tool(name: str, args: dict):
             return {"error": f"Tool {name} not found"}
         
         # FastMCP tools are usually async
-        return await tool_func.fn(**args)
+        result = await tool_func.fn(**args)
+        print(f"[MCP] SUCCESS: {name}")
+        return result
     except Exception as e:
+        print(f"[MCP] ERROR: {name} - {str(e)}")
         return {"error": f"Execution failed: {str(e)}"}
 
 async def investigate_cluster(cluster_events: list, db: Session, site_id: str):
@@ -32,7 +37,9 @@ async def investigate_cluster(cluster_events: list, db: Session, site_id: str):
     Orchestrates multiple tool calls to form a forensic hypothesis.
     """
     # 1. Build initial context for Maya
-    # We pass the raw signals that triggered the investigation
+    # Create relationship graph from raw signals
+    graph = build_evidence_graph(cluster_events)
+    
     event_summaries = [
         {
             "id": e.get('id'),
@@ -44,14 +51,21 @@ async def investigate_cluster(cluster_events: list, db: Session, site_id: str):
     
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
-        {"role": "user", "content": f"SITE_ID: {site_id}\nTarget Signals: {json.dumps(event_summaries)}\n\nBegin forensic investigation. Use tools to gather context."}
+        {
+            "role": "user", 
+            "content": f"""SITE_ID: {site_id}
+Target Signals: {json.dumps(event_summaries)}
+Evidence Relationships: {json.dumps(graph)}
+
+Begin forensic investigation. Use tools to gather context."""
+        }
     ]
     
     reasoning_trace = []
     tool_calls_history = []
     
     # 2. Forensic Loop ( Maya )
-    for turn in range(10): # Allow up to 10 forensic steps
+    for turn in range(6): # Allow up to 6 forensic steps to stay within speed/token limits
         try:
             response = await client.chat.completions.create(
                 model=settings.GROQ_MODEL,
@@ -61,10 +75,11 @@ async def investigate_cluster(cluster_events: list, db: Session, site_id: str):
                 temperature=0.1 # Keep investigation factual
             )
         except groq.RateLimitError:
-            # Fallback to faster model
+            # Fallback to faster model with a small delay
             fallback_model = "llama-3.1-8b-instant"
             if settings.GROQ_MODEL == fallback_model: raise
-            print(f" Maya: Rate limit hit. Falling back to {fallback_model} for turn {turn+1}.")
+            print(f" Maya: Rate limit hit. Waiting 5s then falling back to {fallback_model}.")
+            await asyncio.sleep(5)
             response = await client.chat.completions.create(
                 model=fallback_model,
                 messages=messages,
@@ -74,14 +89,15 @@ async def investigate_cluster(cluster_events: list, db: Session, site_id: str):
             )
         except Exception as e:
             print(f"Maya Error on turn {turn+1}: {str(e)}")
-            return None
+            # Even on error, persist what we have so the signals are linked
+            return await persist_incident(f"INTERRUPTED INVESTIGATION: {str(e)}", reasoning_trace, tool_calls_history, cluster_events, site_id, db, graph)
         
         message = response.choices[0].message
         messages.append(message)
         
         if not message.tool_calls:
             # Investigation complete!
-            return await persist_incident(message.content, reasoning_trace, tool_calls_history, cluster_events, site_id, db)
+            return await persist_incident(message.content, reasoning_trace, tool_calls_history, cluster_events, site_id, db, graph)
             
         # Handle Tool Calls
         for tool_call in message.tool_calls:
@@ -96,18 +112,23 @@ async def investigate_cluster(cluster_events: list, db: Session, site_id: str):
             
             result = await dispatch_mcp_tool(name, args)
             
+            from .tool_registry import TOOL_REGISTRY
+            meta = TOOL_REGISTRY.get(name, {})
+            
             # Log for the trace
             reasoning_trace.append({
                 "step": turn + 1,
                 "tool": name,
                 "input": args,
-                "outcome": str(result)[:300] + "..." # Succinct summary
+                "outcome": str(result)[:500] + "...",
+                "metadata": meta
             })
             
             tool_calls_history.append({
                 "tool": name,
                 "args": args,
-                "result_keys": list(result.keys()) if isinstance(result, dict) else []
+                "result_keys": list(result.keys()) if isinstance(result, dict) else [],
+                "metadata": meta
             })
             
             messages.append({
@@ -119,7 +140,7 @@ async def investigate_cluster(cluster_events: list, db: Session, site_id: str):
 
     return None
 
-async def persist_incident(raw_summary: str, trace: list, calls: list, initial_events: list, site_id: str, db: Session):
+async def persist_incident(raw_summary: str, trace: list, calls: list, initial_events: list, site_id: str, db: Session, graph: dict = None):
     """
     Saves the final investigation as a formal Incident.
     """
@@ -130,24 +151,18 @@ async def persist_incident(raw_summary: str, trace: list, calls: list, initial_e
     avg_lat = sum(lats)/len(lats) if lats else 12.9716 # fallback to site center
     avg_lon = sum(lons)/len(lons) if lons else 77.5946
     
-    # Calculate initial confidence from summary keywords (Heuristic)
-    confidence = 0.8 # default
-    level = "high"
-    if "uncertain" in raw_summary.lower() or "not clear" in raw_summary.lower():
-        confidence = 0.4
-        level = "low"
-    elif "likely" in raw_summary.lower():
-        confidence = 0.6
-        level = "medium"
+    # 2. Dynamic Confidence Calculation
+    # Factors in LLM reasoning + Tool Reliability metadata
+    confidence, level, rationale = calculate_incident_confidence(raw_summary, calls)
 
     incident = Incident(
         site_id=site_id,
         hypothesis=raw_summary,
         confidence_score=confidence,
         confidence_level=level,
-        confidence_rationale="Verified through forensic triangulation of sources.",
+        confidence_rationale=rationale,
         recommended_action="Notify Supervisor" if confidence > 0.7 else "Monitor Zone",
-        reasoning_trace={"steps": trace},
+        reasoning_trace={"steps": trace, "evidence_graph": graph},
         tool_calls_made=calls,
         related_event_ids=[e.get('id') for e in initial_events],
         cluster_centroid_lat=avg_lat,
@@ -159,5 +174,23 @@ async def persist_incident(raw_summary: str, trace: list, calls: list, initial_e
     db.commit()
     db.refresh(incident)
     
+    # 3. LINKAGE: Mark raw signals as investigated so they aren't clustered again
+    from ..models import SensorReading, AccessEvent, VehicleDetection, DroneTelemetry
+    for event in initial_events:
+        e_type = event.get('type')
+        e_id = event.get('id')
+        if not e_id: continue
+        
+        try:
+            if e_type == 'sensor':
+                db.query(SensorReading).filter(SensorReading.id == e_id).update({"incident_id": incident.id})
+            elif e_type == 'access':
+                db.query(AccessEvent).filter(AccessEvent.id == e_id).update({"incident_id": incident.id})
+            elif e_type == 'vehicle':
+                db.query(VehicleDetection).filter(VehicleDetection.id == e_id).update({"incident_id": incident.id})
+        except Exception as e:
+            print(f"Failed to link signal {e_id}: {e}")
+            
+    db.commit()
     print(f"[SEARCH] Incident persisted: {incident.id} (Confidence: {level})")
     return incident

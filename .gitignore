@@ -10,9 +10,9 @@ frontend/yarn-debug.log*
 frontend/yarn-error.log*
 
 # Python
-backend/__pycache__/
-backend/*.py[cod]
-backend/*$py.class
+**/__pycache__/
+**/*.py[cod]
+**/*$py.class
 backend/venv/
 backend/env/
 backend/.env

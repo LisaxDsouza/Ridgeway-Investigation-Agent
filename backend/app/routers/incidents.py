@@ -10,7 +10,7 @@ from ..config import settings
 
 router = APIRouter(prefix="/incidents", tags=["incidents"])
 
-client = groq.Groq(api_key=settings.GROQ_API_KEY)
+client = groq.AsyncGroq(api_key=settings.GROQ_API_KEY)
 
 class ChatRequest(BaseModel):
     message: str
@@ -40,7 +40,7 @@ def review_incident(incident_id: str, update_data: dict, db: Session = Depends(g
     return incident
 
 @router.post("/{incident_id}/chat")
-def chat_with_incident(incident_id: str, request: ChatRequest, db: Session = Depends(get_db)):
+async def chat_with_incident(incident_id: str, request: ChatRequest, db: Session = Depends(get_db)):
     incident = db.query(Incident).filter(Incident.id == incident_id).first()
     if not incident:
         raise HTTPException(status_code=404, detail="Incident not found")
@@ -54,10 +54,20 @@ def chat_with_incident(incident_id: str, request: ChatRequest, db: Session = Dep
     """
     
     try:
-        response = client.chat.completions.create(
+        response = await client.chat.completions.create(
             model=settings.GROQ_MODEL,
             messages=[
-                {"role": "system", "content": "You are the Ridgeway Site Assistant. Answer questions about this specific incident log based on the provided context."},
+                {"role": "system", "content": """You are the Ridgeway Site Intelligence Officer. 
+                Your goal is to provide concise, direct, and non-technical answers to the operator. 
+                
+                STRICT RULES:
+                - NEVER mention tool names (e.g., 'getShiftSchedule', 'getWeatherContext').
+                - NEVER mention 'steps' or 'reasoning traces'.
+                - NEVER explain HOW you got the information. 
+                - Simply state the findings as ground truth.
+                - If the operator asks about staff, provide the role or name without citing the 'CSV' source.
+                - Keep answers to 1-2 sentences unless complexity is truly required.
+                """},
                 {"role": "user", "content": f"Context: {context}\n\nQuestion: {request.message}"}
             ]
         )
@@ -66,10 +76,10 @@ def chat_with_incident(incident_id: str, request: ChatRequest, db: Session = Dep
         try:
             fallback_model = "llama-3.1-8b-instant"
             if settings.GROQ_MODEL == fallback_model: raise
-            response = client.chat.completions.create(
+            response = await client.chat.completions.create(
                 model=fallback_model,
                 messages=[
-                    {"role": "system", "content": "You are Maya, the Ridgeway Forensic AI. Using secondary processing engine."},
+                    {"role": "system", "content": "You are the Ridgeway Site Intelligence Officer. Provide direct, non-technical answers ONLY. No tool citations. No workflow mentions."},
                     {"role": "user", "content": f"Context: {context}\n\nQuestion: {request.message}"}
                 ]
             )

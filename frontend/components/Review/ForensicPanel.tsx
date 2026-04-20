@@ -25,6 +25,10 @@ export default function ForensicPanel() {
     );
   }
 
+  // Extract trace steps and graph
+  const steps = selectedIncident.reasoning_trace?.steps || [];
+  const graph = selectedIncident.reasoning_trace?.evidence_graph;
+
   return (
     <div className="flex flex-col h-full bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
       <div className="p-6 border-b border-slate-50">
@@ -33,9 +37,14 @@ export default function ForensicPanel() {
             AI Generated Hypothesis
           </span>
           <div className="flex gap-2">
-            <button className="p-2 hover:bg-slate-50 rounded-lg transition-colors text-slate-400">
-              <ExternalLink className="w-4 h-4" />
-            </button>
+            <span className={clsx(
+              "text-[10px] font-bold px-2 py-1 rounded-md uppercase",
+              selectedIncident.confidence_level === 'critical' ? "bg-red-50 text-red-600 border border-red-100" :
+              selectedIncident.confidence_level === 'high' ? "bg-green-50 text-green-600 border border-green-100" :
+              "bg-slate-50 text-slate-600 border border-slate-100"
+            )}>
+              {selectedIncident.confidence_level} Confidence
+            </span>
           </div>
         </div>
         <h2 className="text-xl font-bold text-slate-900 leading-tight">
@@ -47,7 +56,7 @@ export default function ForensicPanel() {
         {/* Confidence Meter */}
         <section>
           <div className="flex justify-between items-end mb-2">
-            <h4 className="text-[11px] font-bold text-slate-400 uppercase">Analysis Confidence</h4>
+            <h4 className="text-[11px] font-bold text-slate-400 uppercase">Forensic Confidence</h4>
             <span className="text-sm font-bold text-slate-800">{Math.round(selectedIncident.confidence_score * 100)}%</span>
           </div>
           <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
@@ -61,30 +70,62 @@ export default function ForensicPanel() {
           </p>
         </section>
 
-        {/* Reasoning Trace: The "Vertical Timeline" */}
+        {/* Evidence Graph Summary */}
+        {graph && (
+          <section className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
+            <h4 className="text-[11px] font-bold text-slate-400 uppercase mb-3 flex items-center gap-2">
+              <BrainCircuit className="w-3.5 h-3.5" />
+              Evidence Relationships
+            </h4>
+            <p className="text-xs text-slate-600 mb-3 font-medium">{graph.summary}</p>
+            <div className="flex flex-wrap gap-2">
+              {graph.edges.map((edge: any, i: number) => (
+                <div key={i} className="bg-white px-2 py-1 rounded-lg border border-slate-200 text-[10px] text-slate-500 shadow-sm">
+                  Step {edge.source + 1} <ArrowRight className="inline w-2.5 h-2.5 mx-1" /> Step {edge.target + 1}: <span className="text-slate-800 font-bold">{edge.relation}</span>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Reasoning Trace */}
         <section>
           <h4 className="text-[11px] font-bold text-slate-400 uppercase mb-4 flex items-center gap-2">
             <History className="w-3.5 h-3.5" />
             Investigation Trace
           </h4>
           <div className="space-y-6 relative before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-px before:bg-slate-50">
-            {selectedIncident.reasoning_trace.map((step: any, idx: number) => (
+            {steps.map((step: any, idx: number) => (
               <div key={idx} className="relative pl-8">
                 <div className="absolute left-0 top-1 w-[22px] h-[22px] bg-white border border-slate-200 rounded-full flex items-center justify-center font-bold text-[10px] text-slate-400 z-10 shadow-sm">
                   {idx + 1}
                 </div>
                 <div>
-                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-tight mb-1">
-                    Tool Call: <span className="text-skylark-orange">{step.tool}</span>
-                  </p>
+                  <div className="flex justify-between items-center mb-1">
+                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-tight">
+                      Tool Call: <span className="text-skylark-orange">{step.tool}</span>
+                    </p>
+                    <div className="flex gap-1.5">
+                      {step.metadata?.storage_format && (
+                        <span className="text-[9px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded border border-slate-200 font-mono">
+                          {step.metadata.storage_format.toUpperCase()}
+                        </span>
+                      )}
+                      {step.metadata?.reliability && (
+                        <span className="text-[9px] bg-blue-50 text-blue-500 px-1.5 py-0.5 rounded border border-blue-100 font-bold">
+                          R: {Math.round(step.metadata.reliability * 100)}%
+                        </span>
+                      )}
+                    </div>
+                  </div>
                   <div className="bg-slate-50 rounded-xl p-3 border border-slate-100">
-                    <p className="text-xs text-slate-700 font-mono leading-relaxed whitespace-pre-wrap break-all">
-                      {step.query}
+                    <p className="text-xs text-slate-700 font-mono leading-relaxed truncate">
+                      {JSON.stringify(step.input)}
                     </p>
                     <div className="mt-2 pt-2 border-t border-slate-200/20 flex items-start gap-2">
                       <Sparkles className="w-3.5 h-3.5 text-skylark-orange shrink-0 mt-0.5" />
                       <p className="text-[11px] text-slate-500 italic leading-snug">
-                        {step.insight}
+                        {step.outcome}
                       </p>
                     </div>
                   </div>
@@ -119,3 +160,4 @@ export default function ForensicPanel() {
     </div>
   );
 }
+

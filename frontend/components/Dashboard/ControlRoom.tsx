@@ -6,11 +6,11 @@ import api from '@/lib/api';
 import { 
   Radio, Zap, MapPin, Clock, Search, 
   Activity, Check, ShieldAlert, Truck, Plane, Key,
-  ExternalLink, ArrowRight, Database
+  ExternalLink, ArrowRight, Database, CloudRain, Users
 } from 'lucide-react';
 import { clsx } from 'clsx';
 
-type RawTab = 'sensors' | 'access' | 'vehicles' | 'drones';
+type RawTab = 'sensors' | 'access' | 'vehicles' | 'drones' | 'weather' | 'personnel';
 
 export default function ControlRoom() {
   const { fetchEvents, triggerScan, isScanning } = useIncidentStore();
@@ -72,13 +72,18 @@ export default function ControlRoom() {
         return ['Result', 'Vehicle Type', 'Vehicle ID', 'In Restricted', 'Timestamp'];
       case 'drones':
         return ['Result', 'Mission', 'Drone ID', 'Observation', 'Timestamp'];
+      case 'weather':
+        return ['API Status', 'Conditions', 'Wind Spd', 'Visibility', 'Timestamp'];
+      case 'personnel':
+        return ['Active', 'Staff ID', 'Role', 'Assigned Zone', 'Shift Window'];
       default:
         return [];
     }
   };
 
   const renderRow = (item: any) => {
-    const timeStr = new Date(item.recorded_at).toLocaleString();
+    const timeStr = item.recorded_at ? new Date(item.recorded_at).toLocaleString() : item.timestamp || item.date;
+    
     switch (activeRawTab) {
       case 'sensors':
         return (
@@ -132,6 +137,26 @@ export default function ControlRoom() {
             <td className="py-4 px-6 text-slate-400 text-xs">{timeStr}</td>
           </>
         );
+      case 'weather':
+        return (
+          <>
+            <td className="py-4 px-6"><div className="w-2 h-2 rounded-full bg-blue-500" /></td>
+            <td className="py-4 px-6 font-bold text-blue-600 text-xs uppercase">{item.raw_value}</td>
+            <td className="py-4 px-6 text-slate-500 font-medium">{item.wind_speed}km/h</td>
+            <td className="py-4 px-6 text-slate-500 font-medium">{item.visibility}m</td>
+            <td className="py-4 px-6 text-slate-400 text-xs">{item.timestamp}</td>
+          </>
+        );
+      case 'personnel':
+        return (
+          <>
+            <td className="py-4 px-6"><div className="w-2 h-2 rounded-full bg-green-500" /></td>
+            <td className="py-4 px-6 font-bold text-[#2e3a59] font-mono text-xs">{item.staff_id}</td>
+            <td className="py-4 px-6 text-slate-500 font-bold text-xs uppercase">{item.role}</td>
+            <td className="py-4 px-6 text-slate-400 text-xs">{item.zone}</td>
+            <td className="py-4 px-6 text-slate-400 text-xs italic">{item.shift_start} - {item.shift_end}</td>
+          </>
+        );
     }
   };
 
@@ -139,14 +164,23 @@ export default function ControlRoom() {
 
   const generateBulkData = async () => {
     setIsSeeding(true);
+    // Explicitly set isScanning to true to reflect the backend's auto-trigger
+    useIncidentStore.setState({ isScanning: true });
+    
     try {
       await api.post('/events/seed');
+      
+      // Since it's a background task, we wait a bit then refresh
+      await new Promise(resolve => setTimeout(resolve, 5000));
+      
       fetchRawData(activeRawTab);
-      fetchEvents();
+      await fetchEvents();
+      await useIncidentStore.getState().fetchIncidents();
     } catch (err) {
       console.error('Seeding failed', err);
     } finally {
       setIsSeeding(false);
+      useIncidentStore.setState({ isScanning: false });
     }
   };
 
@@ -191,23 +225,25 @@ export default function ControlRoom() {
 
       {/* 📋 Navigation Tabs */}
       <div className="px-8 pt-4 bg-white border-b border-slate-50 overflow-x-auto scrollbar-hide flex gap-8">
-        {(['sensors', 'access', 'vehicles', 'drones'] as RawTab[]).map(tab => (
+        {(['sensors', 'access', 'vehicles', 'drones', 'weather', 'personnel'] as RawTab[]).map(tab => (
           <button
             key={tab}
             onClick={() => setActiveRawTab(tab)}
             className={clsx(
-              "pb-4 text-xs font-bold uppercase tracking-widest transition-all border-b-2",
+              "pb-4 text-xs font-bold uppercase tracking-widest transition-all border-b-2 flex items-center gap-2",
               activeRawTab === tab ? "border-skylark-orange text-skylark-orange" : "border-transparent text-slate-300 hover:text-slate-500"
             )}
           >
-            {tab === 'access' ? 'Access Control' : tab}
+            {tab === 'weather' ? <CloudRain className="w-3.5 h-3.5" /> : tab === 'personnel' ? <Users className="w-3.5 h-3.5" /> : null}
+            {tab === 'access' ? 'Access Control' : tab === 'personnel' ? 'Shift Roster' : tab}
           </button>
         ))}
       </div>
 
-      <div className="flex-1 p-8 overflow-auto">
+
+      <div className="flex-1 p-0 overflow-auto">
         {/* 🏢 Data Grid View */}
-        <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-xl overflow-hidden flex flex-col">
+        <div className="bg-white flex flex-col border-l border-slate-50 min-h-full">
            {/* Grid Action Bar */}
            <div className="p-6 border-b border-slate-50 flex items-center justify-between bg-slate-50/50">
               <div className="flex items-center gap-4 bg-white border border-slate-100 rounded-2xl px-4 py-2 shadow-sm shrink-0">
@@ -231,7 +267,7 @@ export default function ControlRoom() {
                  </thead>
                  <tbody className="divide-y divide-slate-50">
                     {rawData.map((item, idx) => (
-                      <tr key={item.id} className="hover:bg-slate-50/50 transition-colors group">
+                      <tr key={item.id || `row-${idx}`} className="hover:bg-slate-50/50 transition-colors group">
                         {renderRow(item)}
                       </tr>
                     ))}

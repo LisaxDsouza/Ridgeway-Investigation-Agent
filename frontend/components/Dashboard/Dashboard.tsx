@@ -41,7 +41,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="h-full flex flex-col items-center justify-center max-w-5xl mx-auto space-y-12">
+    <div className="h-full flex flex-col items-center justify-center w-full max-w-7xl mx-auto px-6 lg:px-12 py-12">
       {/* 🌪️ The AI Hero Section */}
       {!selectedIncidentId ? (
         <div className="text-center space-y-4 animate-in fade-in slide-in-from-bottom-6 duration-700 w-full">
@@ -56,7 +56,7 @@ export default function Dashboard() {
           </p>
         </div>
       ) : (
-        <div className="w-full flex-1 flex flex-col pt-10">
+        <div className="w-full flex-1 flex flex-col pt-10 px-12">
            {/* Context Header for Selected Incident */}
            <div className="flex items-center justify-between mb-8 pb-8 border-b border-slate-50">
               <div className="flex items-center gap-4">

@@ -39,9 +39,9 @@ export default function ForensicConsole() {
     : (traceData.steps || []);
 
   return (
-    <div className="h-full p-10 bg-slate-50/30 overflow-hidden">
+    <div className="h-full p-0 bg-slate-50/30 overflow-hidden">
       {/* Main Chat Interface (Expanded) */}
-      <div className="h-full bg-white rounded-[3rem] shadow-skylark border border-slate-100 flex flex-col relative overflow-hidden">
+      <div className="h-full bg-white border-l border-slate-100 flex flex-col relative overflow-hidden">
         <div className="p-8 border-b border-slate-50 flex items-center justify-between bg-white/50 backdrop-blur-md sticky top-0 z-10">
            <div className="flex items-center gap-4">
               <div className="w-10 h-10 bg-orange-100 rounded-2xl flex items-center justify-center text-skylark-orange">
@@ -80,15 +80,6 @@ export default function ForensicConsole() {
            <IncidentChat incidentId={incident.id} />
         </div>
 
-        {/* Console Controls */}
-        <div className="absolute left-8 bottom-32 flex flex-col gap-4">
-           <button className="p-4 bg-white shadow-2xl shadow-slate-200 rounded-2xl border border-slate-100 hover:bg-slate-50 text-slate-600 transition-all hover:-translate-y-1">
-              <Eraser className="w-6 h-6" />
-           </button>
-           <button className="p-4 bg-[#2e3a59] shadow-2xl shadow-[#2e3a59]/20 rounded-2xl text-white transition-all hover:scale-110 active:scale-90">
-              <Plus className="w-6 h-6" />
-           </button>
-        </div>
       </div>
     </div>
   );

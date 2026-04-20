@@ -34,7 +34,7 @@ export default function IncidentChat({ incidentId }: { incidentId: string }) {
       {/* 💬 Conversation Thread */}
       <div className="flex-1 overflow-auto p-12 space-y-10 scrollbar-hide pb-40">
         {messages.length === 0 && (
-          <div className="max-w-3xl mx-auto py-20 text-center space-y-6">
+          <div className="max-w-5xl mx-auto py-20 text-center space-y-6">
             <div className="w-16 h-16 bg-orange-50 rounded-2xl flex items-center justify-center mx-auto shadow-sm">
                <Sparkles className="w-8 h-8 text-skylark-orange" />
             </div>
@@ -48,7 +48,7 @@ export default function IncidentChat({ incidentId }: { incidentId: string }) {
         
         {messages.map((m, i) => (
           <div key={i} className={clsx(
-              "flex gap-8 max-w-4xl mx-auto",
+              "flex gap-8 max-w-6xl mx-auto",
               m.role === 'user' ? "flex-row-reverse" : ""
           )}>
             <div className={clsx(
@@ -73,7 +73,7 @@ export default function IncidentChat({ incidentId }: { incidentId: string }) {
         ))}
         
         {isTyping && (
-          <div className="flex gap-8 max-w-4xl mx-auto animate-pulse">
+          <div className="flex gap-8 max-w-6xl mx-auto animate-pulse">
              <div className="w-12 h-12 rounded-2xl bg-orange-50 border border-orange-100 text-skylark-orange flex items-center justify-center">
                 <Sparkles className="w-6 h-6" />
              </div>

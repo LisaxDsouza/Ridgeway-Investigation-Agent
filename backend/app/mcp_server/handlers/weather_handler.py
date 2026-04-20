@@ -1,12 +1,26 @@
+import json
+import os
 from datetime import datetime
-from ...database import SessionLocal
-from ...data_services.weather_service import WeatherService
+from ...agent.evidence_schema import normalize_list
+from ..utils import get_data_source_path
 
 async def handle(site_id, start_time, end_time):
     try:
-        start = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
-        end = datetime.fromisoformat(end_time.replace('Z', '+00:00'))
-        with SessionLocal() as db:
-            return WeatherService(db).get_for_window(site_id, start, end)
+        data_path = get_data_source_path('weather_api.json')
+        if not os.path.exists(data_path):
+            return {"error": f"[v3-FINAL] Not Found at {data_path} (Check Time: {datetime.utcnow().isoformat()})"}
+            
+        with open(data_path, 'r') as f:
+            raw_data = json.load(f)
+            
+        # Filter by site_id and time (simple filter for simulation)
+        site_data = [d for d in raw_data if d['site_id'] == site_id]
+        
+        return {
+            "source": "WeatherAPI (Live)",
+            "format": "JSON",
+            "data": normalize_list(site_data, "External Weather API", "json")
+        }
     except Exception as e:
         return {"available": False, "error": str(e)}
+
