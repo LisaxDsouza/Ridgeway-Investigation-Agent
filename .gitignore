@@ -16,6 +16,7 @@ frontend/yarn-error.log*
 backend/venv/
 backend/env/
 backend/.env
+.env
 backend/.pytest_cache/
 
 # Databases

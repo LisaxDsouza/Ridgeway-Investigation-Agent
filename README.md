@@ -15,24 +15,25 @@ The platform acts as an **Investigation Engine**, proactively clustering signals
 
 ---
 
-## 🚀 Quick Start (Docker - Recommended)
+## 🚀 Zero-to-Hero Setup (Fresh Clone)
 
-The easiest way to get the entire platform (Database, Backend, and Frontend) running is via Docker Compose.
+The entire platform—including installation, database seeding, and service orchestration—is automated. 
 
-1. **Configure Environment**:
-   ```bash
-   cp .env.example .env
-   # Open .env and add your GROQ_API_KEY
-   ```
+1.  **Run the Setup Script**:
+    ```powershell
+    .\setup.ps1
+    ```
 
-2. **Launch the Stack**:
-   ```bash
-   docker-compose up --build
-   ```
+2.  **Configure Environment**:
+    The script will create a `.env` file for you if it's missing. Open it and add your `GROQ_API_KEY`.
 
-3. **Access the Application**:
-   - **Frontend**: [http://localhost:3000](http://localhost:3000)
-   - **API Docs**: [http://localhost:8000/docs](http://localhost:8000/docs)
+3.  **Run Setup Again**:
+    Once your key is added, run `.\setup.ps1` again. It will skip installation and jump straight to booting the platform.
+
+### Access:
+- **Frontend**: [http://localhost:3000](http://localhost:3000)
+- **Maya API**: [http://localhost:8000/docs](http://localhost:8000/docs)
+- **Database**: `localhost:5433` (PostgreSQL)
 
 ---
 
@@ -62,13 +63,10 @@ The easiest way to get the entire platform (Database, Backend, and Frontend) run
    ```bash
    cp .env.example .env
    # Update GROQ_API_KEY and DATABASE_URL
-<<<<<<< HEAD
    ```
 5. Launch the API server:
    ```bash
    uvicorn app.main:app --reload
-=======
->>>>>>> 000b2bd706a0f5f25ed5731f233a0474c5088f78
    ```
 
 ### 3. Frontend Setup

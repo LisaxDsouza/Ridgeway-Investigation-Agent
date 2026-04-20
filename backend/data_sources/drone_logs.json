@@ -9,73 +9,10 @@
         "type": "drone_observation"
     },
     {
-        "mission_id": "M-704",
-        "timestamp": "2026-04-20T14:22:06.045244Z",
-        "lat": 13.050697381614649,
-        "lon": 77.54144312611989,
-        "observation": "Auto-generated patrol observation: All clear.",
-        "confidence": 0.9,
-        "type": "drone_observation"
-    },
-    {
-        "mission_id": "M-412",
-        "timestamp": "2026-04-20T14:28:37.900564Z",
-        "lat": 13.050694156963957,
-        "lon": 77.54186999310696,
-        "observation": "Auto-generated patrol observation: All clear.",
-        "confidence": 0.9,
-        "type": "drone_observation"
-    },
-    {
-        "mission_id": "M-657",
-        "timestamp": "2026-04-20T14:28:48.978801Z",
-        "lat": 13.05077876627307,
-        "lon": 77.5410401316889,
-        "observation": "Auto-generated patrol observation: All clear.",
-        "confidence": 0.9,
-        "type": "drone_observation"
-    },
-    {
-        "mission_id": "M-444",
-        "timestamp": "2026-04-20T14:31:44.551729Z",
-        "lat": 13.049744471767895,
-        "lon": 77.54514321130377,
-        "observation": "Auto-generated patrol observation: All clear.",
-        "confidence": 0.9,
-        "type": "drone_observation"
-    },
-    {
-        "mission_id": "M-679",
-        "timestamp": "2026-04-20T14:34:06.566594Z",
-        "lat": 13.047643969637065,
-        "lon": 77.54461917880455,
-        "observation": "Auto-generated patrol observation: All clear.",
-        "confidence": 0.9,
-        "type": "drone_observation"
-    },
-    {
-        "mission_id": "M-545",
-        "timestamp": "2026-04-20T14:38:27.351952Z",
-        "lat": 13.047770034169659,
-        "lon": 77.54535592070103,
-        "observation": "Auto-generated patrol observation: All clear.",
-        "confidence": 0.9,
-        "type": "drone_observation"
-    },
-    {
-        "mission_id": "M-970",
-        "timestamp": "2026-04-20T14:44:34.441894Z",
-        "lat": 13.048420376047096,
-        "lon": 77.54377315636432,
-        "observation": "Auto-generated patrol observation: All clear.",
-        "confidence": 0.9,
-        "type": "drone_observation"
-    },
-    {
-        "mission_id": "M-920",
-        "timestamp": "2026-04-20T14:47:47.345046Z",
-        "lat": 13.049802005657108,
-        "lon": 77.54142137591545,
+        "mission_id": "M-860",
+        "timestamp": "2026-04-20T15:54:41.969666Z",
+        "lat": 13.048258254683507,
+        "lon": 77.54416618384262,
         "observation": "Auto-generated patrol observation: All clear.",
         "confidence": 0.9,
         "type": "drone_observation"

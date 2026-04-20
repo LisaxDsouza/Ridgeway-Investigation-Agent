@@ -19,74 +19,11 @@
     },
     {
         "site_id": "ridgeway-01",
-        "timestamp": "2026-04-20T14:22:06.045244Z",
+        "timestamp": "2026-04-20T15:54:41.969666Z",
         "type": "weather",
-        "wind_speed": 8.57456902813275,
-        "visibility": 613,
-        "precipitation": 1.2787453484055211,
-        "raw_value": "AUTO-GEN: 11km/h Winds"
-    },
-    {
-        "site_id": "ridgeway-01",
-        "timestamp": "2026-04-20T14:28:37.900564Z",
-        "type": "weather",
-        "wind_speed": 13.238791686728142,
-        "visibility": 1757,
-        "precipitation": 4.265944996657348,
-        "raw_value": "AUTO-GEN: 36km/h Winds"
-    },
-    {
-        "site_id": "ridgeway-01",
-        "timestamp": "2026-04-20T14:28:48.978801Z",
-        "type": "weather",
-        "wind_speed": 36.401024050381494,
-        "visibility": 236,
-        "precipitation": 5.59724822678561,
-        "raw_value": "AUTO-GEN: 25km/h Winds"
-    },
-    {
-        "site_id": "ridgeway-01",
-        "timestamp": "2026-04-20T14:31:44.551729Z",
-        "type": "weather",
-        "wind_speed": 39.41406394905912,
-        "visibility": 1259,
-        "precipitation": 0.1329300160012048,
-        "raw_value": "AUTO-GEN: 35km/h Winds"
-    },
-    {
-        "site_id": "ridgeway-01",
-        "timestamp": "2026-04-20T14:34:06.566594Z",
-        "type": "weather",
-        "wind_speed": 45.41111450701236,
-        "visibility": 1157,
-        "precipitation": 1.6701567537272644,
-        "raw_value": "AUTO-GEN: 11km/h Winds"
-    },
-    {
-        "site_id": "ridgeway-01",
-        "timestamp": "2026-04-20T14:38:27.351952Z",
-        "type": "weather",
-        "wind_speed": 26.71611380933055,
-        "visibility": 1186,
-        "precipitation": 8.113122836099713,
-        "raw_value": "AUTO-GEN: 14km/h Winds"
-    },
-    {
-        "site_id": "ridgeway-01",
-        "timestamp": "2026-04-20T14:44:34.441894Z",
-        "type": "weather",
-        "wind_speed": 37.726793113590745,
-        "visibility": 1070,
-        "precipitation": 9.209663211879116,
-        "raw_value": "AUTO-GEN: 45km/h Winds"
-    },
-    {
-        "site_id": "ridgeway-01",
-        "timestamp": "2026-04-20T14:47:47.345046Z",
-        "type": "weather",
-        "wind_speed": 28.43487556618259,
-        "visibility": 1486,
-        "precipitation": 4.129563964601235,
-        "raw_value": "AUTO-GEN: 40km/h Winds"
+        "wind_speed": 39.95987311122895,
+        "visibility": 310,
+        "precipitation": 7.314839984516972,
+        "raw_value": "AUTO-GEN: 22km/h Winds"
     }
 ]

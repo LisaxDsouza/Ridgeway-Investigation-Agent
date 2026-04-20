@@ -86,7 +86,7 @@ with open(os.path.join(DATA_DIR, 'shift_schedule.csv'), 'w', newline='') as f:
 
 # 5. PostgreSQL Seed (Triggers)
 import sys
-sys.path.append(os.path.dirname(BASE_DIR))
+sys.path.append(BASE_DIR)
 try:
     from app.database import SessionLocal
     from app.models import SensorReading, AccessEvent
