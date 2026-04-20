@@ -62,10 +62,13 @@ The easiest way to get the entire platform (Database, Backend, and Frontend) run
    ```bash
    cp .env.example .env
    # Update GROQ_API_KEY and DATABASE_URL
+<<<<<<< HEAD
    ```
 5. Launch the API server:
    ```bash
    uvicorn app.main:app --reload
+=======
+>>>>>>> 000b2bd706a0f5f25ed5731f233a0474c5088f78
    ```
 
 ### 3. Frontend Setup
