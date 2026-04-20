@@ -5,6 +5,14 @@ class Settings(BaseSettings):
     GROQ_API_KEY: str
     GOOGLE_API_KEY: Optional[str] = None
     DATABASE_URL: str
+    
+    @property
+    def sqlalchemy_database_url(self) -> str:
+        # Fly.io provide 'postgres://', but SQLAlchemy requires 'postgresql://'
+        if self.DATABASE_URL.startswith("postgres://"):
+            return self.DATABASE_URL.replace("postgres://", "postgresql://", 1)
+        return self.DATABASE_URL
+
     GROQ_MODEL: str = "llama3-groq-70b-8192-tool-use-preview"
     SEED_SCENARIO: str = "block_c_incident"
     LOG_LEVEL: str = "INFO"

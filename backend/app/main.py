@@ -1,6 +1,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .config import settings
+from .database import engine, Base
+from . import models
+
+# Create tables on startup
+Base.metadata.create_all(bind=engine)
 
 from .routers import investigate, incidents, hooks, events, debug, briefings, chat
 
