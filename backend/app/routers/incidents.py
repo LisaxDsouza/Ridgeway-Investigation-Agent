@@ -53,12 +53,28 @@ def chat_with_incident(incident_id: str, request: ChatRequest, db: Session = Dep
     Reasoning Trace: {incident.reasoning_trace}
     """
     
-    response = client.chat.completions.create(
-        model=settings.GROQ_MODEL,
-        messages=[
-            {"role": "system", "content": "You are the Ridgeway Site Assistant. Answer questions about this specific incident log based on the provided context."},
-            {"role": "user", "content": f"Context: {context}\n\nQuestion: {request.message}"}
-        ]
-    )
-    
-    return {"answer": response.choices[0].message.content}
+    try:
+        response = client.chat.completions.create(
+            model=settings.GROQ_MODEL,
+            messages=[
+                {"role": "system", "content": "You are the Ridgeway Site Assistant. Answer questions about this specific incident log based on the provided context."},
+                {"role": "user", "content": f"Context: {context}\n\nQuestion: {request.message}"}
+            ]
+        )
+        return {"answer": response.choices[0].message.content}
+    except groq.RateLimitError:
+        try:
+            fallback_model = "llama-3.1-8b-instant"
+            if settings.GROQ_MODEL == fallback_model: raise
+            response = client.chat.completions.create(
+                model=fallback_model,
+                messages=[
+                    {"role": "system", "content": "You are Maya, the Ridgeway Forensic AI. Using secondary processing engine."},
+                    {"role": "user", "content": f"Context: {context}\n\nQuestion: {request.message}"}
+                ]
+            )
+            return {"answer": f"(SECONDARY ENGINE) {response.choices[0].message.content}"}
+        except Exception:
+            return {"answer": "SYSTEM OVERLOAD: Rate limit reached. Try again later."}
+    except Exception as e:
+        return {"answer": f"ERROR: {str(e)}"}

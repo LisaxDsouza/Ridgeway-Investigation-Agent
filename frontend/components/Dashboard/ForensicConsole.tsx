@@ -2,102 +2,93 @@
 
 import React from 'react';
 import { useIncidentStore } from '@/lib/store';
-import { BrainCircuit, History, ArrowRight, ShieldCheck, Sparkles, MoreHorizontal, Copy, Plus, Eraser, Zap } from 'lucide-react';
+import { 
+  ShieldCheck, MoreHorizontal, Eraser, Plus, 
+  ShieldAlert
+} from 'lucide-react';
 import IncidentChat from '../Review/IncidentChat';
+import { clsx } from 'clsx';
 
 export default function ForensicConsole() {
   const { incidents, selectedIncidentId, reviewIncident } = useIncidentStore();
-  const incident = incidents.find(i => i.id === selectedIncidentId);
+  const incidentSnapshot = incidents.find(i => i.id === selectedIncidentId);
+  const incident = incidentSnapshot || incidents[0];
 
   if (!incident) {
     return (
-      <div className="h-full bg-slate-50/30 rounded-[2.5rem] border-2 border-dashed border-slate-100 flex flex-col items-center justify-center text-slate-400 gap-4">
-        <div className="p-6 bg-white rounded-3xl shadow-skylark">
-           <BrainCircuit className="w-12 h-12 text-slate-200" />
+      <div className="h-full bg-slate-50/10 rounded-[2.5rem] border-2 border-dashed border-slate-100 flex flex-col items-center justify-center text-slate-400 gap-6 p-12">
+        <div className="w-32 h-32 bg-white rounded-[3rem] shadow-skylark flex items-center justify-center animate-pulse">
+           <BrainCircuit className="w-16 h-16 text-slate-100" />
         </div>
-        <p className="text-sm font-semibold text-slate-400">Select an investigation to open Super Chat</p>
+        <div className="text-center space-y-2">
+           <p className="text-xl font-extrabold text-[#2e3a59]">Investigation Terminal Idle</p>
+           <p className="text-sm font-medium text-slate-400">Select an active incident from the sidebar to open the forensic console.</p>
+        </div>
       </div>
     );
   }
 
+  // Parse reasoning trace safely
+  let traceData = typeof incident.reasoning_trace === 'string' 
+    ? JSON.parse(incident.reasoning_trace) 
+    : (incident.reasoning_trace || []);
+  
+  // Handle case where trace is wrapped in an object like { steps: [...] }
+  const rawTrace = Array.isArray(traceData) 
+    ? traceData 
+    : (traceData.steps || []);
+
   return (
-    <div className="flex h-full gap-8">
-      {/* 1. Main Chat Interface (Center Stage) */}
-      <div className="flex-1 bg-white rounded-[2.5rem] shadow-skylark border border-slate-100 flex flex-col relative overflow-hidden">
-        <div className="p-8 border-b border-slate-50 flex items-center justify-between">
-           <div className="flex items-center gap-3">
-              <div className="w-2 h-2 rounded-full bg-green-400" />
-              <h3 className="font-bold text-[#2e3a59] flex items-center gap-2 text-lg">
-                Investigation Console
-                <Sparkles className="w-4 h-4 text-skylark-orange" />
-              </h3>
+    <div className="h-full p-10 bg-slate-50/30 overflow-hidden">
+      {/* Main Chat Interface (Expanded) */}
+      <div className="h-full bg-white rounded-[3rem] shadow-skylark border border-slate-100 flex flex-col relative overflow-hidden">
+        <div className="p-8 border-b border-slate-50 flex items-center justify-between bg-white/50 backdrop-blur-md sticky top-0 z-10">
+           <div className="flex items-center gap-4">
+              <div className="w-10 h-10 bg-orange-100 rounded-2xl flex items-center justify-center text-skylark-orange">
+                 <ShieldAlert className="w-6 h-6" />
+              </div>
+              <div>
+                 <h3 className="font-extrabold text-[#2e3a59] flex items-center gap-2 text-lg">
+                   Investigation: REF-{incident.id.slice(0, 8)}
+                   <div className="px-2.5 py-1 bg-orange-50 text-skylark-orange rounded-lg text-[9px] font-black uppercase tracking-widest border border-orange-100">
+                      {incident.confidence_level} Confidence
+                   </div>
+                 </h3>
+                 <p className="text-xs text-slate-400 font-medium italic">Logic: {incident.recommended_action}</p>
+              </div>
            </div>
-           <button className="p-2.5 bg-slate-50 rounded-2xl text-slate-400 hover:text-slate-600 border border-slate-100 transition-colors">
-              <MoreHorizontal className="w-5 h-5" />
-           </button>
+           
+           <div className="flex items-center gap-3">
+              <button 
+                onClick={() => reviewIncident(incident.id, 'Confirmed baseline via forensic override.', 'resolved')}
+                className="px-6 py-3 bg-skylark-orange text-white rounded-2xl font-bold text-xs shadow-xl shadow-orange-500/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
+              >
+                <ShieldCheck className="w-4 h-4 fill-white" />
+                Accept AI Logic
+              </button>
+              
+              <div className="h-8 w-px bg-slate-100 mx-2" />
+              
+              <button className="p-3 bg-slate-50 rounded-2xl text-slate-400 hover:text-slate-600 border border-slate-100 transition-colors">
+                 <MoreHorizontal className="w-5 h-5" />
+              </button>
+           </div>
         </div>
 
-        {/* The Chat Area */}
+        {/* The Chat Area (Maya's Brain Output) */}
         <div className="flex-1 overflow-hidden">
            <IncidentChat incidentId={incident.id} />
         </div>
 
-        {/* Floating Side Tools (Like the Clear Chat button in reference) */}
-        <div className="absolute left-6 bottom-32 flex flex-col gap-3">
-           <button className="p-3 bg-white shadow-xl rounded-2xl border border-slate-100 hover:bg-slate-50 text-slate-600 transition-all hover:-translate-y-1">
-              <Eraser className="w-5 h-5" />
+        {/* Console Controls */}
+        <div className="absolute left-8 bottom-32 flex flex-col gap-4">
+           <button className="p-4 bg-white shadow-2xl shadow-slate-200 rounded-2xl border border-slate-100 hover:bg-slate-50 text-slate-600 transition-all hover:-translate-y-1">
+              <Eraser className="w-6 h-6" />
            </button>
-           <button className="p-3 bg-[#2e3a59] shadow-xl rounded-2xl text-white transition-all hover:scale-110">
-              <Plus className="w-5 h-5" />
+           <button className="p-4 bg-[#2e3a59] shadow-2xl shadow-[#2e3a59]/20 rounded-2xl text-white transition-all hover:scale-110 active:scale-90">
+              <Plus className="w-6 h-6" />
            </button>
         </div>
-      </div>
-
-      {/* 2. Side Context (Right Deck) */}
-      <div className="w-[450px] flex flex-col gap-8 shrink-0">
-         {/* History / Traces (Inspired by Right Column in UI image) */}
-         <div className="flex-1 bg-white rounded-[2.5rem] shadow-skylark border border-slate-100 p-8 flex flex-col overflow-hidden">
-            <h4 className="font-bold text-[#2e3a59] mb-6 flex items-center justify-between">
-               Investigation Log
-               <div className="p-2 bg-slate-50 rounded-xl">
-                  <History className="w-4 h-4 text-slate-400" />
-               </div>
-            </h4>
-            <div className="space-y-4 overflow-y-auto pr-2 scrollbar-hide">
-               {incident.reasoning_trace.map((step: any, idx: number) => (
-                  <div key={idx} className="p-5 bg-slate-50 border border-slate-100 rounded-3xl group cursor-pointer hover:bg-white hover:border-skylark-orange transition-all duration-300 shadow-sm hover:shadow-lg">
-                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 flex items-center justify-between">
-                        {step.tool}
-                        <ArrowRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                     </p>
-                     <p className="text-xs text-[#2e3a59] font-medium leading-relaxed">{step.insight}</p>
-                  </div>
-               ))}
-            </div>
-         </div>
-
-         {/* Plan Status / Station Control (Like the Pro Plan card) */}
-         <div className="bg-skylark-orange p-8 rounded-[2.5rem] shadow-2xl shadow-orange-500/30 text-white relative overflow-hidden group">
-            <div className="relative z-10 flex justify-between items-start mb-6">
-               <div>
-                  <h5 className="text-xl font-extrabold tracking-tight">Station Ready</h5>
-                  <p className="text-white/70 text-sm font-medium">Ridgeway Sector 7 Alpha</p>
-               </div>
-               <div className="p-3 bg-white/20 backdrop-blur-md rounded-2xl">
-                  <Zap className="w-6 h-6 fill-white" />
-               </div>
-            </div>
-            
-            <button 
-              onClick={() => reviewIncident(incident.id, 'Acknowledged', 'resolved')}
-              className="w-full bg-[#2e3a59] text-white py-4 rounded-3xl font-bold text-sm shadow-xl transition-all hover:scale-[1.03] active:scale-95 text-center relative z-10"
-            >
-               Accept AI Hypothesis
-            </button>
-
-            {/* Background Blob */}
-            <div className="absolute top-[-40px] right-[-40px] w-48 h-48 bg-white/10 rounded-full blur-3xl group-hover:bg-white/20 transition-all pointer-events-none" />
-         </div>
       </div>
     </div>
   );

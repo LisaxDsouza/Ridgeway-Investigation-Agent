@@ -11,8 +11,7 @@ from .handlers import (
     shift_handler,
     site_metadata_handler,
     historical_handler,
-    spatial_handler,
-    drone_simulate_handler
+    spatial_handler
 )
 
 mcp = FastMCP("Skylark-Forensics-Server")
@@ -103,12 +102,3 @@ async def clusterEventsByLocation(
 ) -> dict:
     """Group a list of raw signals into discrete spatial clusters using DBSCAN."""
     return await spatial_handler.handle(events)
-
-@mcp.tool()
-async def simulateDroneInspection(
-    target_lat: float,
-    target_lon: float,
-    incident_id: Optional[str] = None
-) -> dict:
-    """Dispatch a simulated drone to verify coordinates. Returns flight path and findings."""
-    return await drone_simulate_handler.handle(target_lat, target_lon, incident_id)

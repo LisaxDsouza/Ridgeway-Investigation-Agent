@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { Send, User, Sparkles, Paperclip, Mic } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 import api from '@/lib/api';
 import { clsx } from 'clsx';
 
@@ -62,7 +63,11 @@ export default function IncidentChat({ incidentId }: { incidentId: string }) {
                   ? "bg-white border-slate-50 text-slate-700 rounded-tr-none" 
                   : "bg-slate-50/50 border-slate-50 text-[#2e3a59] rounded-tl-none font-medium"
             )}>
-              {m.content}
+              {m.role === 'assistant' ? (
+                <div className="markdown-container prose-sm">
+                  <ReactMarkdown>{m.content}</ReactMarkdown>
+                </div>
+              ) : m.content}
             </div>
           </div>
         ))}

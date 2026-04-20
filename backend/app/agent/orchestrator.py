@@ -15,8 +15,9 @@ async def dispatch_mcp_tool(name: str, args: dict):
     """
     try:
         # Since we use FastMCP, we can access the registered tools
+        # The correct path in recent FastMCP versions is via the _tool_manager
         # This is a bit of a shortcut for the local dev loop
-        tool_func = mcp_root.mcp._tools.get(name)
+        tool_func = mcp_root.mcp._tool_manager._tools.get(name)
         if not tool_func:
             return {"error": f"Tool {name} not found"}
         
@@ -51,13 +52,29 @@ async def investigate_cluster(cluster_events: list, db: Session, site_id: str):
     
     # 2. Forensic Loop ( Maya )
     for turn in range(10): # Allow up to 10 forensic steps
-        response = await client.chat.completions.create(
-            model=settings.GROQ_MODEL,
-            messages=messages,
-            tools=TOOL_SCHEMAS,
-            tool_choice="auto",
-            temperature=0.1 # Keep investigation factual
-        )
+        try:
+            response = await client.chat.completions.create(
+                model=settings.GROQ_MODEL,
+                messages=messages,
+                tools=TOOL_SCHEMAS,
+                tool_choice="auto",
+                temperature=0.1 # Keep investigation factual
+            )
+        except groq.RateLimitError:
+            # Fallback to faster model
+            fallback_model = "llama-3.1-8b-instant"
+            if settings.GROQ_MODEL == fallback_model: raise
+            print(f" Maya: Rate limit hit. Falling back to {fallback_model} for turn {turn+1}.")
+            response = await client.chat.completions.create(
+                model=fallback_model,
+                messages=messages,
+                tools=TOOL_SCHEMAS,
+                tool_choice="auto",
+                temperature=0.1
+            )
+        except Exception as e:
+            print(f"Maya Error on turn {turn+1}: {str(e)}")
+            return None
         
         message = response.choices[0].message
         messages.append(message)
@@ -142,5 +159,5 @@ async def persist_incident(raw_summary: str, trace: list, calls: list, initial_e
     db.commit()
     db.refresh(incident)
     
-    print(f"🔍 Incident persisted: {incident.id} (Confidence: {level})")
+    print(f"[SEARCH] Incident persisted: {incident.id} (Confidence: {level})")
     return incident

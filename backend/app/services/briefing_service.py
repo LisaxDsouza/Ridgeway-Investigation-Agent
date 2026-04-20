@@ -39,13 +39,25 @@ class BriefingService:
         
         Keep it professional, high-agency, and concise.
         """
-        
-        response = await client.chat.completions.create(
-            model=settings.GROQ_MODEL,
-            messages=[{"role": "user", "content": prompt}]
-        )
-        
-        content = response.choices[0].message.content
+        try:
+            response = await client.chat.completions.create(
+                model=settings.GROQ_MODEL,
+                messages=[{"role": "user", "content": prompt}]
+            )
+            content = response.choices[0].message.content
+        except groq.RateLimitError:
+            try:
+                fallback_model = "llama-3.1-8b-instant"
+                if settings.GROQ_MODEL == fallback_model: raise
+                response = await client.chat.completions.create(
+                    model=fallback_model,
+                    messages=[{"role": "user", "content": prompt + "\n(Note: This is a fallback generation due to load.)"}]
+                )
+                content = response.choices[0].message.content
+            except Exception:
+                content = "ERROR: System capacity reached. Unable to generate brief at this time."
+        except Exception as e:
+            content = f"ERROR during briefing generation: {str(e)}"
         
         # 3. Persist
         briefing = Briefing(

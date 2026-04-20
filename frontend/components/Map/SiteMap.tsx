@@ -39,14 +39,14 @@ export default function SiteMap() {
       el.addEventListener('click', () => {
         selectIncident(incident.id);
         map.current?.flyTo({
-          center: [incident.cluster_center_lon, incident.cluster_center_lat],
+          center: [incident.cluster_centroid_lon, incident.cluster_centroid_lat],
           zoom: 17,
           essential: true
         });
       });
 
       new maplibregl.Marker({ element: el })
-        .setLngLat([incident.cluster_center_lon, incident.cluster_center_lat])
+        .setLngLat([incident.cluster_centroid_lon, incident.cluster_centroid_lat])
         .addTo(map.current!);
     });
   }, [incidents, selectedIncidentId]);

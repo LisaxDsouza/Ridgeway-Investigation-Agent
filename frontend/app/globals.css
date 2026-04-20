@@ -24,3 +24,28 @@ body {
   color: var(--foreground);
   font-family: 'Inter', system-ui, sans-serif;
 }
+
+/* Maya Markdown Styling */
+.markdown-container ul {
+  list-style-type: disc;
+  padding-left: 1.5rem;
+  margin-top: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.markdown-container li {
+  margin-bottom: 0.5rem;
+}
+
+.markdown-container strong {
+  color: var(--skylark-orange);
+  font-weight: 800;
+}
+
+.markdown-container p {
+  margin-bottom: 1rem;
+}
+
+.markdown-container p:last-child {
+  margin-bottom: 0;
+}

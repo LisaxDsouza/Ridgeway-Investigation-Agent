@@ -14,7 +14,7 @@ async def call_tool_debug(request: ToolRequest):
     """
     Manually invoke an MCP tool for debugging.
     """
-    tool_func = mcp_root.mcp._tools.get(request.name)
+    tool_func = mcp_root.mcp._tool_manager._tools.get(request.name)
     if not tool_func:
         raise HTTPException(status_code=404, detail=f"Tool {request.name} not found")
         
@@ -32,6 +32,6 @@ async def list_tools():
     return {
         "tools": [
             {"name": name, "description": tool.description}
-            for name, tool in mcp_root.mcp._tools.items()
+            for name, tool in mcp_root.mcp._tool_manager._tools.items()
         ]
     }

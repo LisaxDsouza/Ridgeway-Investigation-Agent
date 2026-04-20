@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .config import settings
 
-from .routers import investigate, incidents, hooks, events, debug, briefings
+from .routers import investigate, incidents, hooks, events, debug, briefings, chat
 
 app = FastAPI(title="6:10 Assistant API")
 
@@ -21,6 +21,7 @@ app.include_router(hooks.router, prefix="/api/v1")
 app.include_router(events.router, prefix="/api/v1")
 app.include_router(debug.router, prefix="/api/v1")
 app.include_router(briefings.router, prefix="/api/v1")
+app.include_router(chat.router, prefix="/api/v1")
 
 @app.get("/")
 async def root():

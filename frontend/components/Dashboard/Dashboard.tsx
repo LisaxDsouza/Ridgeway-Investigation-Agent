@@ -2,16 +2,42 @@
 
 import React from 'react';
 import { useIncidentStore } from '@/lib/store';
+import api from '@/lib/api';
 import { Paperclip, Mic, Send, Sparkles, LayoutGrid, FileText, Bell, Clock } from 'lucide-react';
 import IncidentChat from '@/components/Review/IncidentChat';
+import ReactMarkdown from 'react-markdown';
 
 export default function Dashboard() {
-  const { selectedIncidentId, incidents } = useIncidentStore();
+  const { selectedIncidentId, incidents, fetchIncidents } = useIncidentStore();
   const selectedIncident = incidents.find(i => i.id === selectedIncidentId);
   const [searchValue, setSearchValue] = React.useState('');
+  const [isTyping, setIsTyping] = React.useState(false);
+  const [response, setResponse] = React.useState<string | null>(null);
 
   const handleChipClick = (text: string) => {
     setSearchValue(text);
+  };
+
+  const handleSend = async () => {
+    if (!searchValue.trim()) return;
+    
+    setIsTyping(true);
+    setResponse(null);
+    
+    try {
+      const res = await api.post('/chat/', { message: searchValue });
+      setResponse(res.data.answer);
+      setSearchValue('');
+      
+      // If a scan was triggered, refresh incidents after a short delay
+      if (res.data.action === 'trigger_scan') {
+        setTimeout(fetchIncidents, 3000);
+      }
+    } catch (err) {
+      setResponse("I'm sorry, I encountered an error connecting to the reasoning engine.");
+    } finally {
+      setIsTyping(false);
+    }
   };
 
   return (
@@ -60,12 +86,22 @@ export default function Dashboard() {
       {/* 🚀 Central Super Chat Input */}
       {!selectedIncidentId && (
         <div className="w-full space-y-10">
+          {response && (
+            <div className="p-10 bg-orange-50/50 rounded-[3rem] border border-orange-100 animate-in fade-in zoom-in duration-300 shadow-sm">
+               <div className="prose prose-slate max-w-none prose-p:text-[#2e3a59] prose-p:font-bold prose-li:text-[#2e3a59] prose-li:font-medium prose-strong:text-skylark-orange">
+                  <ReactMarkdown>{response}</ReactMarkdown>
+               </div>
+            </div>
+          )}
+
           <div className="w-full bg-white shadow-2xl shadow-slate-200 rounded-[2.5rem] border border-slate-100 p-6 transition-all focus-within:ring-4 focus-within:ring-orange-100/50">
             <div className="px-4 py-2">
                <input 
                  value={searchValue}
                  onChange={(e) => setSearchValue(e.target.value)}
-                 placeholder="What do you want to build or investigate?"
+                 onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                 placeholder={isTyping ? "Maya is thinking..." : "What do you want to build or investigate?"}
+                 disabled={isTyping}
                  className="w-full bg-transparent border-none text-xl outline-none text-[#2e3a59] placeholder:text-slate-300 font-medium"
                />
             </div>
@@ -77,8 +113,16 @@ export default function Dashboard() {
                </button>
                
                <div className="flex items-center gap-4">
-                  <button className="p-4 bg-skylark-orange text-white rounded-2xl shadow-xl shadow-orange-500/30 hover:bg-skylark-orange-hover hover:-translate-y-1 transition-all">
-                     <Send className="w-6 h-6 fill-white" />
+                  <button 
+                    onClick={handleSend}
+                    disabled={isTyping}
+                    className="p-4 bg-skylark-orange text-white rounded-2xl shadow-xl shadow-orange-500/30 hover:bg-skylark-orange-hover hover:-translate-y-1 transition-all disabled:opacity-50 disabled:translate-y-0"
+                  >
+                     {isTyping ? (
+                       <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                     ) : (
+                       <Send className="w-6 h-6 fill-white" />
+                     )}
                   </button>
                </div>
             </div>
@@ -87,7 +131,7 @@ export default function Dashboard() {
           {/* Action Chips */}
           <div className="flex flex-wrap items-center justify-center gap-3">
              {[
-               "Create a quick report based on my data.",
+               "Run a full site investigation.",
                "Search for perimeter anomalies.",
                "Summarize last night's gate logs.",
                "Draft a security brief for the team."
