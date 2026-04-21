@@ -68,7 +68,7 @@ Begin forensic investigation. Use tools to gather context."""
     for turn in range(6): # Allow up to 6 forensic steps to stay within speed/token limits
         try:
             response = await client.chat.completions.create(
-                model=settings.GROQ_MODEL,
+                model=settings.safe_groq_model,
                 messages=messages,
                 tools=TOOL_SCHEMAS,
                 tool_choice="auto",
@@ -77,7 +77,7 @@ Begin forensic investigation. Use tools to gather context."""
         except groq.RateLimitError:
             # Fallback to faster model with a small delay
             fallback_model = "llama-3.1-8b-instant"
-            if settings.GROQ_MODEL == fallback_model: raise
+            if settings.safe_groq_model == fallback_model: raise
             print(f" Maya: Rate limit hit. Waiting 5s then falling back to {fallback_model}.")
             await asyncio.sleep(5)
             response = await client.chat.completions.create(

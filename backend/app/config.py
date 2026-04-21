@@ -30,6 +30,14 @@ class Settings(BaseSettings):
         return url
 
     # Default Settings
+    @property
+    def safe_groq_model(self) -> str:
+        # Prevent usage of decommissioned model even if set in Env
+        deprecated = "llama3-groq-70b-8192-tool-use-preview"
+        if self.GROQ_MODEL == deprecated:
+            return "llama-3.3-70b-versatile"
+        return self.GROQ_MODEL
+
     GROQ_MODEL: str = "llama-3.3-70b-versatile"
     SEED_SCENARIO: str = "block_c_incident"
     LOG_LEVEL: str = "INFO"
