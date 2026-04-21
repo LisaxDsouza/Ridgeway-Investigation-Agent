@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     
     @property
     def sqlalchemy_database_url(self) -> str:
-        # Fly.io provide 'postgres://', but SQLAlchemy requires 'postgresql://'
+        # Railway/Fly.io provide 'postgres://', but SQLAlchemy requires 'postgresql://'
         if self.DATABASE_URL.startswith("postgres://"):
             return self.DATABASE_URL.replace("postgres://", "postgresql://", 1)
         return self.DATABASE_URL

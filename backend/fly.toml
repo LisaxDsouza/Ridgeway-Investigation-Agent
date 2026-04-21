@@ -1,5 +1,5 @@
 app = "skylark-ridgeway-api"
-primary_region = "ams" # Change this to your preferred region
+primary_region = "ams"
 
 [build]
   dockerfile = "Dockerfile"
