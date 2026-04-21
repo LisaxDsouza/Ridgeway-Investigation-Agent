@@ -55,7 +55,7 @@ async def chat_with_incident(incident_id: str, request: ChatRequest, db: Session
     
     try:
         response = await client.chat.completions.create(
-            model=settings.GROQ_MODEL,
+            model=settings.safe_groq_model,
             messages=[
                 {"role": "system", "content": """You are the Ridgeway Site Intelligence Officer. 
                 Your goal is to provide concise, direct, and non-technical answers to the operator. 

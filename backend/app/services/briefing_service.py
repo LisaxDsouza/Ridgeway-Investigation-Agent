@@ -41,14 +41,14 @@ class BriefingService:
         """
         try:
             response = await client.chat.completions.create(
-                model=settings.GROQ_MODEL,
+                model=settings.safe_groq_model,
                 messages=[{"role": "user", "content": prompt}]
             )
             content = response.choices[0].message.content
         except groq.RateLimitError:
             try:
                 fallback_model = "llama-3.1-8b-instant"
-                if settings.GROQ_MODEL == fallback_model: raise
+                if settings.safe_groq_model == fallback_model: raise
                 response = await client.chat.completions.create(
                     model=fallback_model,
                     messages=[{"role": "user", "content": prompt + "\n(Note: This is a fallback generation due to load.)"}]

@@ -51,7 +51,7 @@ async def maya_general_chat(
     # 3. General Query Handling
     try:
         response = await client.chat.completions.create(
-            model=settings.GROQ_MODEL,
+            model=settings.safe_groq_model,
             messages=[
                 {
                     "role": "system", 

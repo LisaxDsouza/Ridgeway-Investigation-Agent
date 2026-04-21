@@ -32,9 +32,14 @@ class Settings(BaseSettings):
     # Default Settings
     @property
     def safe_groq_model(self) -> str:
-        # Prevent usage of decommissioned model even if set in Env
-        deprecated = "llama3-groq-70b-8192-tool-use-preview"
-        if self.GROQ_MODEL == deprecated:
+        # Prevent usage of decommissioned or preview models
+        decommissioned = [
+            "llama3-groq-70b-8192-tool-use-preview",
+            "llama3-70b-8192",
+            "llama3-8b-8192",
+            "llama-3.1-70b-preview"
+        ]
+        if self.GROQ_MODEL in decommissioned or "preview" in self.GROQ_MODEL.lower():
             return "llama-3.3-70b-versatile"
         return self.GROQ_MODEL
 
