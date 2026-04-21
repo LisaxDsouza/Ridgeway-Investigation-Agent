@@ -28,3 +28,5 @@ pydantic-settings==2.3.0
 
 # Seed data
 faker==25.3.0
+mcp[cli]
+mcp
