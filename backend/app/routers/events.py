@@ -160,8 +160,8 @@ async def list_access(site_id: str = settings.SITE_ID, db: Session = Depends(get
             "outcome": a.outcome,
             "badge_id": a.badge_id,
             "gate_id": a.gate_id,
-            "recorded_at": a.recorded_at.isoformat() + "Z",
-            "timestamp": a.recorded_at.isoformat() + "Z",
+            "recorded_at": a.recorded_at.isoformat() if a.recorded_at else None,
+            "timestamp": a.recorded_at.isoformat() if a.recorded_at else None,
             "source": "postgresql"
         })
 
@@ -245,11 +245,12 @@ async def list_drones(site_id: str = settings.SITE_ID, db: Session = Depends(get
     for d in pg_results:
         results.append({
             "id": str(d.id),
-            "mission_id": d.mission_id,
-            "drone_id": d.drone_id,
-            "observation": d.observation,
-            "recorded_at": d.recorded_at.isoformat() + "Z",
-            "timestamp": d.recorded_at.isoformat() + "Z",
+            "mission_id": d.mission_id or "M-UNKNOWN",
+            "drone_id": d.drone_id or "D-01",
+            "observation": d.observation or "No telemetry observations recorded.",
+            "flagged": d.flagged,
+            "recorded_at": d.recorded_at.isoformat() if d.recorded_at else None,
+            "timestamp": d.recorded_at.isoformat() if d.recorded_at else None,
             "source": "postgresql"
         })
 
@@ -425,63 +426,52 @@ async def seed_live_data(
         )
         db.add(e)
     
-    # Seed SQLite: Access Control
+    # 🚨 NEW: Seed PostgreSQL Access & Drone telemetry directly for Cloud Reliability
+    badge_id = f"STAFF-{random.randint(100,999)}"
+    db.add(AccessEvent(
+        site_id=settings.SITE_ID, gate_id="north-gate", zone="perimeter",
+        badge_id=badge_id, recorded_at=now, outcome="fail",
+        lat=base_lat + 0.001, lon=base_lon + 0.001
+    ))
+
+    db.add(DroneTelemetry(
+        site_id=settings.SITE_ID, mission_id=f"M-{random.randint(100,999)}",
+        drone_id="D-SKYLARK-01", recorded_at=now,
+        lat=base_lat + 0.002, lon=base_lon + 0.002,
+        observation="Visual confirmation: Unauthorized badge attempt at North Gate. Tracking.",
+        flagged=True, flag_reason="Security Breach Response"
+    ))
+
+    db.add(VehicleDetection(
+        site_id=settings.SITE_ID, zone="restricted-zone",
+        vehicle_id=f"KA-01-{random.randint(1000,9999)}", vehicle_type="truck",
+        recorded_at=now, in_restricted=True,
+        lat=base_lat - 0.001, lon=base_lon - 0.001
+    ))
+    
+    # Seed SQLite: Access Control (Keep for local legacy testing)
     badge_path = get_data_source_path('badge_logs.db')
     if os.path.exists(badge_path):
         try:
             conn = sqlite3.connect(badge_path)
             c = conn.cursor()
             c.execute("INSERT INTO badges (badge_id, site_id, gate_id, timestamp, outcome) VALUES (?, ?, ?, ?, ?)",
-                     (f"STAFF-{random.randint(100,999)}", settings.SITE_ID, "main-gate", now_iso, random.choice(['success', 'fail'])))
+                     (badge_id, settings.SITE_ID, "main-gate", now_iso, "fail"))
             conn.commit()
             conn.close()
         except: pass
 
-    # Seed SQLite: Vehicle Tracking
-    veh_path = get_data_source_path('vehicle_logs.db')
-    if os.path.exists(veh_path):
-        try:
-            conn = sqlite3.connect(veh_path)
-            c = conn.cursor()
-            l, ln = base_lat + random.uniform(-0.003, 0.003), base_lon + random.uniform(-0.003, 0.003)
-            c.execute("INSERT INTO vehicles (vehicle_id, site_id, zone, timestamp, lat, lon, is_restricted) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                     (f"KA-0{random.randint(1,9)}-Z-{random.randint(1000,9999)}", settings.SITE_ID, "restricted-zone", now_iso, l, ln, 1))
-            conn.commit()
-            conn.close()
-        except: pass
-
-    # Seed JSON: Weather
-    weather_path = get_data_source_path('weather_api.json')
-    if os.path.exists(weather_path):
-        try:
-            with open(weather_path, 'r+') as f:
-                data = json.load(f)
-                data.append({
-                    "site_id": settings.SITE_ID,
-                    "timestamp": now_iso,
-                    "type": "weather",
-                    "wind_speed": random.uniform(5, 50),
-                    "visibility": random.randint(100, 2000),
-                    "precipitation": random.uniform(0, 10),
-                    "raw_value": f"AUTO-GEN: {random.randint(5,50)}km/h Winds"
-                })
-                f.seek(0)
-                json.dump(data[-20:], f, indent=4)
-                f.truncate()
-        except: pass
-
-    # Seed JSON: Drone Logs
+    # Seed Drone Logs JSON (Keep for local legacy testing)
     drone_path = get_data_source_path('drone_logs.json')
     if os.path.exists(drone_path):
         try:
             with open(drone_path, 'r+') as f:
                 data = json.load(f)
-                l, ln = base_lat + random.uniform(-0.003, 0.003), base_lon + random.uniform(-0.003, 0.003)
                 data.append({
                     "mission_id": f"M-{random.randint(100,999)}",
                     "timestamp": now_iso,
-                    "lat": l, "lon": ln,
-                    "observation": "Auto-generated patrol observation: All clear.",
+                    "lat": base_lat + 0.002, "lon": base_lon + 0.002,
+                    "observation": "Cloud-ready JSON backup observation: All clear.",
                     "confidence": 0.9,
                     "type": "drone_observation"
                 })
@@ -490,21 +480,13 @@ async def seed_live_data(
                 f.truncate()
         except: pass
 
-    # Seed CSV: Shift
-    shift_path = get_data_source_path('shift_schedule.csv')
-    if os.path.exists(shift_path):
-        try:
-            with open(shift_path, 'a', newline='') as f:
-                writer = csv.writer(f)
-                writer.writerow([now.strftime('%Y-%m-%d'), settings.SITE_ID, f"GEN-{random.randint(10,99)}", "Contractor", "Global", "00:00:00", "23:59:59"])
-        except: pass
-
+    # Commit all PostgreSQL changes
     db.commit()
     
     # AUTONOMOUS CHAIN: Wake up Maya to investigate the fresh data immediately
     print(f"[*] Seeding complete. Maya is waking up to investigate fresh signals...")
     background_tasks.add_task(start_investigation, background_tasks, db)
     
-    return {"status": "seeded_and_scan_triggered", "count": 10}
+    return {"status": "seeded_and_scan_triggered", "count": 13}
 
 
