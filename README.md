@@ -1,4 +1,4 @@
-# 6:10 Assistant: Ridgeway Site Overnight Intelligence Platform
+# 6:10 Assistant: Ridgeway Site Overnight Intelligence Platform - https://ridgeway-investigation-agent.vercel.app/
 
 6:10 (lame name I know) Assistant is an AI-native overnight operations intelligence platform designed for Ridgeway Site. It transforms raw overnight signals (sensor telemetry, access control, vehicle tracking, and drone logs) into a structured morning briefing for site operations leads.
 
