@@ -30,7 +30,7 @@ class Settings(BaseSettings):
         return url
 
     # Default Settings
-    GROQ_MODEL: str = "llama3-groq-70b-8192-tool-use-preview"
+    GROQ_MODEL: str = "llama-3.3-70b-versatile"
     SEED_SCENARIO: str = "block_c_incident"
     LOG_LEVEL: str = "INFO"
     SITE_ID: str = "ridgeway-01"
