@@ -43,4 +43,9 @@ class Settings(BaseSettings):
             env_file = ".env"
         # Otherwise, stay strictly within the system environment
 
+import os
+print(f"DEBUG: Process started. Available environment keys: {list(os.environ.keys())}")
+if os.getenv("DATABASE_URL"):
+    print(f"DEBUG: RAW DATABASE_URL detected with length: {len(os.getenv('DATABASE_URL'))}")
+
 settings = Settings()
